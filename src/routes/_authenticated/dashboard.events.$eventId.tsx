@@ -33,6 +33,7 @@ function EventWorkspace() {
   const [personName, setPersonName] = useState("");
   const [activePerson, setActivePerson] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [albumQrDataUrl, setAlbumQrDataUrl] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["event", eventId],
