@@ -54,19 +54,19 @@ function receiptHtml(input: {
       <tr><td align="center">
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:14px;padding:36px;">
           <tr><td style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#a8763e;">Aperture&amp;Ember</td></tr>
-          <tr><td style="padding-top:18px;font-size:24px;">Thank you, ${input.personName}.</td></tr>
+          <tr><td style="padding-top:18px;font-size:24px;">Thank you, ${personName}.</td></tr>
           <tr><td style="padding-top:12px;font-size:16px;line-height:1.6;color:#5b5048;">
-            Your ${photos} from <strong>${input.eventName}</strong> are ready to download — full resolution, no watermark.
+            Your ${photos} from <strong>${eventName}</strong> are ready to download — full resolution, no watermark.
           </td></tr>
           <tr><td style="padding-top:24px;">
             <table role="presentation" width="100%" style="font-size:15px;color:#5b5048;">
-              <tr><td style="padding:6px 0;">Event</td><td align="right">${input.eventName}</td></tr>
+              <tr><td style="padding:6px 0;">Event</td><td align="right">${eventName}</td></tr>
               <tr><td style="padding:6px 0;">Photos</td><td align="right">${photos}</td></tr>
               <tr><td style="padding:6px 0;border-top:1px solid #eee5da;">Total paid</td><td align="right" style="border-top:1px solid #eee5da;"><strong>${formatGbp(input.amountPence)}</strong></td></tr>
             </table>
           </td></tr>
           <tr><td align="center" style="padding-top:30px;">
-            <a href="${input.downloadUrl}" style="display:inline-block;background:#2f2822;color:#faf7f3;text-decoration:none;padding:14px 30px;border-radius:999px;font-size:15px;">Download your photos</a>
+            <a href="${downloadUrl}" style="display:inline-block;background:#2f2822;color:#faf7f3;text-decoration:none;padding:14px 30px;border-radius:999px;font-size:15px;">Download your photos</a>
           </td></tr>
           <tr><td style="padding-top:26px;font-size:13px;color:#8b8078;line-height:1.6;">
             This link is private to you. Keep it safe — anyone with it can download your photos.
