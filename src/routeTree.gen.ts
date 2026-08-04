@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AlbumTokenIndexRouteImport } from './routes/album.$token.index'
+import { Route as AlbumTokenStatusRouteImport } from './routes/album.$token.status'
 import { Route as GalleryTokenIndexRouteImport } from './routes/gallery.$token.index'
 import { Route as GalleryTokenDownloadsRouteImport } from './routes/gallery.$token.downloads'
 import { Route as GalleryTokenStatusRouteImport } from './routes/gallery.$token.status'
@@ -43,6 +44,11 @@ const AuthenticatedDashboardIndexRoute =
 const AlbumTokenIndexRoute = AlbumTokenIndexRouteImport.update({
   id: '/album/$token/',
   path: '/album/$token/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlbumTokenStatusRoute = AlbumTokenStatusRouteImport.update({
+  id: '/album/$token/status',
+  path: '/album/$token/status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryTokenIndexRoute = GalleryTokenIndexRouteImport.update({
@@ -76,6 +82,7 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/album/$token/status'
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/dashboard/'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/album/$token/status'
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/dashboard'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/album/$token/status'
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/_authenticated/dashboard/'
@@ -149,6 +161,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  AlbumTokenStatusRoute: typeof AlbumTokenStatusRoute
   GalleryTokenDownloadsRoute: typeof GalleryTokenDownloadsRoute
   GalleryTokenStatusRoute: typeof GalleryTokenStatusRoute
   AlbumTokenIndexRoute: typeof AlbumTokenIndexRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/album/$token'
       fullPath: '/album/$token/'
       preLoaderRoute: typeof AlbumTokenIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/album/$token/status': {
+      id: '/album/$token/status'
+      path: '/album/$token/status'
+      fullPath: '/album/$token/status'
+      preLoaderRoute: typeof AlbumTokenStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery/$token/': {
@@ -249,6 +269,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  AlbumTokenStatusRoute: AlbumTokenStatusRoute,
   GalleryTokenDownloadsRoute: GalleryTokenDownloadsRoute,
   GalleryTokenStatusRoute: GalleryTokenStatusRoute,
   AlbumTokenIndexRoute: AlbumTokenIndexRoute,

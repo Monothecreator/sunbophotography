@@ -53,6 +53,7 @@ function AlbumStatus() {
       );
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [data?.status, navigate, sessionId, token]);
 
   if (!sessionId) {
