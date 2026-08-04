@@ -54,17 +54,19 @@ async function markFailed(session: any) {
 
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
+  const origin = new URL(req.url).origin;
 
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
       // Delayed-notification methods stay "unpaid" until they settle later.
-      if (session.payment_status !== "unpaid") await settleOrder(session);
+      if (session.payment_status !== "unpaid") await settleOrder(session, env, origin);
       break;
     }
     case "checkout.session.async_payment_succeeded":
-      await settleOrder(event.data.object);
+      await settleOrder(event.data.object, env, origin);
       break;
+
     case "checkout.session.async_payment_failed":
       await markFailed(event.data.object);
       break;
