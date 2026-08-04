@@ -18,7 +18,11 @@ Passes when:
 - [ ] The checkout domain is registered (Lovable manages `*.lovable.app`; a
       custom domain must be registered with Apple Pay after DNS is pointed)
 
-The same result is visible in the dashboard under **Payments → Apple Pay status**.
+Or `bun run check:apple-pay live`. The same result is visible in the dashboard
+under **Payments → Apple Pay status**, and CI runs it on every push/PR and daily
+via `.github/workflows/apple-pay-readiness.yml` — a non-zero exit fails the build.
+CI needs the `LOVABLE_API_KEY`, `STRIPE_SANDBOX_API_KEY`, and (for live)
+`STRIPE_LIVE_API_KEY` repository secrets.
 
 ## 1. Button appears (manual, real device)
 
