@@ -10,9 +10,13 @@ export const Route = createFileRoute("/gallery/$token/downloads")({
   }),
   head: () => ({
     meta: [
-      { title: "Your downloads" },
-      { name: "description", content: "Download the full-resolution photos you purchased." },
-      { property: "og:title", content: "Your downloads" },
+      { title: "Your Downloads — Aperture&Ember" },
+      {
+        name: "description",
+        content:
+          "Download the full-resolution, watermark-free photos you purchased from your Aperture&Ember event gallery.",
+      },
+      { property: "og:title", content: "Your Downloads — Aperture&Ember" },
       { property: "og:description", content: "Your full-resolution photos, ready to keep." },
       { name: "robots", content: "noindex" },
     ],

@@ -9,10 +9,36 @@ export const Route = createFileRoute("/")({
         content:
           "Upload an event, match photos to each guest, and send them a private QR gallery they can preview and buy in seconds.",
       },
-      { property: "og:title", content: "Aperture&Ember — Event photo delivery" },
+      {
+        property: "og:title",
+        content: "Aperture&Ember — Deliver event photos to the people in them",
+      },
       {
         property: "og:description",
         content: "Private QR galleries, watermarked previews, paid full-resolution downloads.",
+      },
+      { property: "og:url", content: "/" },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Aperture&Ember",
+          url: "/",
+          description: "Event photo delivery for photographers and their guests.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Aperture&Ember",
+          url: "/",
+        }),
       },
     ],
   }),

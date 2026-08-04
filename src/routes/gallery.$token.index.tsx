@@ -11,10 +11,18 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 export const Route = createFileRoute("/gallery/$token/")({
   head: () => ({
     meta: [
-      { title: "Your photos" },
-      { name: "description", content: "Your personal photo gallery from the event." },
-      { property: "og:title", content: "Your photos" },
-      { property: "og:description", content: "Your personal photo gallery from the event." },
+      { title: "Your Photo Gallery — Aperture&Ember" },
+      {
+        name: "description",
+        content:
+          "Access your private event photo gallery from Aperture&Ember to preview your watermarked photos and purchase full-resolution downloads.",
+      },
+      { property: "og:title", content: "Your Photo Gallery — Aperture&Ember" },
+      {
+        property: "og:description",
+        content:
+          "Preview the photos taken of you at the event and unlock full-resolution downloads.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
