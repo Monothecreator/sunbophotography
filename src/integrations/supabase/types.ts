@@ -140,6 +140,42 @@ export type Database = {
           },
         ]
       }
+      payouts: {
+        Row: {
+          amount_pence: number
+          created_at: string
+          currency: string
+          failure_code: string | null
+          id: string
+          status: string
+          stripe_payout_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_pence: number
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          id?: string
+          status?: string
+          stripe_payout_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_pence?: number
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          id?: string
+          status?: string
+          stripe_payout_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       people: {
         Row: {
           contact: string | null
