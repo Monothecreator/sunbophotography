@@ -16,6 +16,7 @@ import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authe
 import { Route as GalleryTokenIndexRouteImport } from './routes/gallery.$token.index'
 import { Route as GalleryTokenDownloadsRouteImport } from './routes/gallery.$token.downloads'
 import { Route as AuthenticatedDashboardEventsEventIdRouteImport } from './routes/_authenticated/dashboard.events.$eventId'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +54,12 @@ const AuthenticatedDashboardEventsEventIdRoute =
     path: '/dashboard/events/$eventId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,6 +77,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,6 +88,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/_authenticated/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/gallery/$token/'
     | '/dashboard/events/$eventId'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/gallery/$token'
     | '/dashboard/events/$eventId'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -106,6 +118,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/'
     | '/gallery/$token/'
     | '/_authenticated/dashboard/events/$eventId'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -114,6 +127,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   GalleryTokenDownloadsRoute: typeof GalleryTokenDownloadsRoute
   GalleryTokenIndexRoute: typeof GalleryTokenIndexRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -167,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardEventsEventIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -190,6 +211,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   GalleryTokenDownloadsRoute: GalleryTokenDownloadsRoute,
   GalleryTokenIndexRoute: GalleryTokenIndexRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
