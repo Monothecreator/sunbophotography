@@ -16,21 +16,31 @@ function getSupabase() {
 }
 
 /** Marks the order behind a completed checkout session as paid. */
-async function settleOrder(session: any) {
+async function settleOrder(session: any, env: StripeEnv, origin?: string) {
   const orderId = session?.metadata?.orderId;
   const sessionId = session?.id;
   if (!orderId && !sessionId) return;
 
-  const query = getSupabase()
+  const db = getSupabase();
+  const query = db
     .from("orders")
     .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
 
-  const { error } = orderId
+  const { data, error } = orderId
     ? await query.eq("id", orderId)
     : await query.eq("stripe_session_id", sessionId);
-  if (error) console.error("Failed to settle order", error);
+  if (error) {
+    console.error("Failed to settle order", error);
+    return;
+  }
+
+  // Receipt goes out once, from the server, only for an order Stripe confirmed.
+  const settledId = data?.[0]?.id ?? orderId;
+  if (settledId) await sendOrderReceipt(db, settledId, env, origin);
 }
+
 
 async function markFailed(session: any) {
   const orderId = session?.metadata?.orderId;
