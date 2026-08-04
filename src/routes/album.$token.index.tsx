@@ -71,7 +71,7 @@ function SharedAlbum() {
     );
   }
 
-  const total = priceForSelection(selected.size, data.photos.length);
+  const total = priceForSelection(selected.size, data.photos.length, data.tiers);
 
   if (checkoutIds) {
     return (
@@ -163,7 +163,7 @@ function SharedAlbum() {
                 className="text-xs text-muted-foreground underline-offset-4 hover:underline"
               >
                 Buy the whole album —{" "}
-                {formatGBP(priceForSelection(data.photos.length, data.photos.length))}
+                {formatGBP(priceForSelection(data.photos.length, data.photos.length, data.tiers))}
               </button>
             </div>
             <button

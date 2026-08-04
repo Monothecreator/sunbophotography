@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
+import { Route as AuthenticatedDashboardAccountRouteImport } from './routes/_authenticated/dashboard.account'
 import { Route as AlbumTokenIndexRouteImport } from './routes/album.$token.index'
 import { Route as AlbumTokenDownloadsRouteImport } from './routes/album.$token.downloads'
 import { Route as AlbumTokenStatusRouteImport } from './routes/album.$token.status'
@@ -46,6 +47,12 @@ const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
     id: '/dashboard/',
     path: '/dashboard/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardAccountRoute =
+  AuthenticatedDashboardAccountRouteImport.update({
+    id: '/dashboard/account',
+    path: '/dashboard/account',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AlbumTokenIndexRoute = AlbumTokenIndexRouteImport.update({
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/dashboard/account'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/dashboard/account'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -170,6 +182,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/sitemap.xml'
+    | '/_authenticated/dashboard/account'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/account': {
+      id: '/_authenticated/dashboard/account'
+      path: '/dashboard/account'
+      fullPath: '/dashboard/account'
+      preLoaderRoute: typeof AuthenticatedDashboardAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/album/$token/': {
       id: '/album/$token/'
       path: '/album/$token'
@@ -292,11 +312,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardAccountRoute: typeof AuthenticatedDashboardAccountRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardEventsEventIdRoute: typeof AuthenticatedDashboardEventsEventIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardAccountRoute: AuthenticatedDashboardAccountRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDashboardEventsEventIdRoute:
     AuthenticatedDashboardEventsEventIdRoute,

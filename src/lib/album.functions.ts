@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { priceForSelection } from "./pricing";
+import { priceForSelection, tiersFromEvent } from "./pricing";
 import {
   createStripeClient,
   getStripeErrorMessage,
@@ -34,7 +34,9 @@ type Db = Awaited<ReturnType<typeof admin>>;
 async function resolveAlbum(db: Db, token: string) {
   const { data: event, error } = await db
     .from("events")
-    .select("id, name, date, status")
+    .select(
+      "id, name, date, status, price_single_pence, price_five_pence, price_gallery_pence",
+    )
     .eq("public_token", token)
     .maybeSingle();
   if (error) throw new Error("Album lookup failed");
@@ -67,6 +69,7 @@ export const getSharedAlbum = createServerFn({ method: "POST" })
     return {
       eventName: event.name,
       eventDate: event.date,
+      tiers: tiersFromEvent(event),
       photos: items,
     };
   });
@@ -99,7 +102,17 @@ export const startAlbumCheckout = createServerFn({ method: "POST" })
     const photoIds = data.photoIds.filter((id) => allowed.has(id));
     if (photoIds.length === 0) throw new Error("Those photos are not part of this album");
 
-    const amount = priceForSelection(photoIds.length, allowed.size);
+    // Retire abandoned checkouts for this album so they don't linger as pending.
+    const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await db
+      .from("orders")
+      .update({ status: "expired" })
+      .eq("event_id", event.id)
+      .is("person_id", null)
+      .eq("status", "pending")
+      .lt("created_at", staleCutoff);
+
+    const amount = priceForSelection(photoIds.length, allowed.size, tiersFromEvent(event));
     if (amount <= 0) throw new Error("Nothing to pay for");
 
     const { data: order, error } = await db
@@ -142,15 +155,15 @@ export const startAlbumCheckout = createServerFn({ method: "POST" })
 
       let session: Stripe.Checkout.Session;
       try {
-        session = await stripe.checkout.sessions.create({
-          ...params,
-          managed_payments: { enabled: true },
-        } as Stripe.Checkout.SessionCreateParams);
+        session = await stripe.checkout.sessions.create(
+          { ...params, managed_payments: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
+          { idempotencyKey: `order_${order.id}_managed` },
+        );
       } catch {
-        session = await stripe.checkout.sessions.create({
-          ...params,
-          automatic_tax: { enabled: true },
-        } as Stripe.Checkout.SessionCreateParams);
+        session = await stripe.checkout.sessions.create(
+          { ...params, automatic_tax: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
+          { idempotencyKey: `order_${order.id}_tax` },
+        );
       }
 
       await db.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
@@ -220,9 +233,14 @@ export const getAlbumCheckoutStatus = createServerFn({ method: "POST" })
         if (session.payment_status !== "unpaid") {
           await db
             .from("orders")
-            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string" ? session.payment_intent : null,
+            })
             .eq("id", order.id)
-            .eq("status", "pending");
+            .in("status", ["pending", "expired"]);
           const { sendOrderReceipt } = await import("./receipt.server");
           await sendOrderReceipt(db, order.id, data.environment);
           return { ...details, status: "paid", message: "Payment received." };

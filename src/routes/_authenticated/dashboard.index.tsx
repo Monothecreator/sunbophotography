@@ -71,7 +71,10 @@ function Dashboard() {
     if (created) navigate({ to: "/dashboard/events/$eventId", params: { eventId: created.id } });
   }
 
-  const revenue = (data?.orders ?? []).reduce((s, o) => s + o.amount_pence, 0);
+  const revenue = (data?.orders ?? []).reduce(
+    (s, o) => s + o.amount_pence - (o.refunded_pence ?? 0),
+    0,
+  );
   const downloads = (data?.orders ?? []).reduce((s, o) => s + (o.photo_ids?.length ?? 0), 0);
   const customers = new Set((data?.orders ?? []).map((o) => o.person_id)).size;
 
@@ -80,6 +83,10 @@ function Dashboard() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="font-display text-base font-semibold">Aperture&amp;Ember Studio</span>
+          <div className="flex items-center gap-4">
+          <Link to="/dashboard/account" className="text-sm text-muted-foreground hover:text-foreground">
+            Account
+          </Link>
           <button
             onClick={async () => {
               await qc.cancelQueries();
@@ -91,6 +98,7 @@ function Dashboard() {
           >
             Sign out
           </button>
+          </div>
         </div>
       </header>
 
@@ -117,7 +125,7 @@ function Dashboard() {
               {data?.events.map((ev) => {
                 const evRevenue = data.orders
                   .filter((o) => o.event_id === ev.id)
-                  .reduce((s, o) => s + o.amount_pence, 0);
+                  .reduce((s, o) => s + o.amount_pence - (o.refunded_pence ?? 0), 0);
                 const evViews = data.views.filter((v) => v.event_id === ev.id).length;
                 const evPeople = data.people.filter((p) => p.event_id === ev.id).length;
                 return (

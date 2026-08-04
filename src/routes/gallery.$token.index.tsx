@@ -80,7 +80,7 @@ function GuestGallery() {
     );
   }
 
-  const total = priceForSelection(selected.size, data.photos.length);
+  const total = priceForSelection(selected.size, data.photos.length, data.tiers);
 
   if (checkoutIds) {
     return (
@@ -183,7 +183,7 @@ function GuestGallery() {
                 onClick={() => setSelected(new Set(data.photos.map((p) => p.id)))}
                 className="text-xs text-muted-foreground underline-offset-4 hover:underline"
               >
-                Buy entire gallery — {formatGBP(priceForSelection(data.photos.length, data.photos.length))}
+                Buy entire gallery — {formatGBP(priceForSelection(data.photos.length, data.photos.length, data.tiers))}
               </button>
             </div>
             <button
