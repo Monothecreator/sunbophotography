@@ -118,10 +118,20 @@ function EventWorkspace() {
     ? photos.filter((p) => p.assigned_person_id === selected.id).length
     : 0;
 
-  async function showQr() {
-    if (!galleryUrl) return;
-    setQrDataUrl(await QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }));
-  }
+  useEffect(() => {
+    let cancelled = false;
+    if (!galleryUrl || assignedCount === 0) {
+      setQrDataUrl(null);
+      return;
+    }
+    QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }).then((url) => {
+      if (!cancelled) setQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [galleryUrl, assignedCount]);
+
 
   return (
     <main className="min-h-screen bg-background">
