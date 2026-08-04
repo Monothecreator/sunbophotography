@@ -190,7 +190,63 @@ function EventWorkspace() {
               </p>
             </div>
           )}
+
+          {albumUrl && (
+            <div className="surface mt-6 flex flex-wrap items-center gap-6 p-5">
+              <div className="shrink-0">
+                {albumQrDataUrl ? (
+                  <img
+                    src={albumQrDataUrl}
+                    alt={`QR code linking to the ${data?.event?.name ?? "event"} album`}
+                    className="w-36 rounded-md bg-white p-2"
+                  />
+                ) : (
+                  <div className="h-36 w-36 animate-pulse rounded-md bg-muted" />
+                )}
+              </div>
+              <div className="min-w-[240px] flex-1 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold">Album QR — share with everyone</p>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone who scans it lands on the full event album to preview watermarked photos
+                    and pay. Downloads stay tied to each buyer&rsquo;s own purchase.
+                  </p>
+                </div>
+                <input
+                  readOnly
+                  value={albumUrl}
+                  className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-xs"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(albumUrl)}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    Copy link
+                  </button>
+                  {albumQrDataUrl && (
+                    <a
+                      href={albumQrDataUrl}
+                      download={`${data?.event?.name ?? "event"}-album-qr.png`}
+                      className="rounded-md border border-border px-3 py-1.5 text-xs"
+                    >
+                      Download PNG
+                    </a>
+                  )}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Photos from ${data?.event?.name ?? "the event"}: ${albumUrl}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
+
 
         <section className="grid gap-8 lg:grid-cols-[1fr_2fr]">
           <div>
