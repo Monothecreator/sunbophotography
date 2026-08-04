@@ -115,18 +115,22 @@ export async function sendOrderReceipt(
     if (!order || order.status !== "paid" || order.receipt_sent_at) return;
 
     // Buyer email: Stripe collects it at checkout; fall back to the contact
-    // the photographer stored against this person.
-    const { data: person } = await db
-      .from("people")
-      .select("name, contact, qr_token")
-      .eq("id", order.person_id)
-      .maybeSingle();
+    // the photographer stored against this person (personal galleries only).
+    const person = order.person_id
+      ? (
+          await db
+            .from("people")
+            .select("name, contact, qr_token")
+            .eq("id", order.person_id)
+            .maybeSingle()
+        ).data
+      : null;
     const { data: event } = await db
       .from("events")
-      .select("name")
+      .select("name, public_token")
       .eq("id", order.event_id)
       .maybeSingle();
-    if (!person || !event) return;
+    if (!event) return;
 
     let email = order.receipt_email ?? null;
     if (!email && order.stripe_session_id) {
@@ -138,7 +142,7 @@ export async function sendOrderReceipt(
         console.error("Could not read buyer email from Stripe", e);
       }
     }
-    if (!email && person.contact?.includes("@")) email = person.contact.trim();
+    if (!email && person?.contact?.includes("@")) email = person.contact.trim();
     if (!email) {
       console.warn(`No email address available for order ${orderId}; receipt skipped`);
       return;
@@ -153,7 +157,12 @@ export async function sendOrderReceipt(
       .select("id");
     if (!claimed || claimed.length === 0) return;
 
-    const downloadUrl = `${siteOrigin(origin)}/gallery/${person.qr_token}/downloads`;
+    // Shared-album buyers download through their own checkout session, since
+    // the album link itself is shared with every guest at the event.
+    const downloadUrl = person
+      ? `${siteOrigin(origin)}/gallery/${person.qr_token}/downloads`
+      : `${siteOrigin(origin)}/album/${event.public_token}/downloads?session_id=${order.stripe_session_id ?? ""}`;
+
     const photoCount = order.photo_ids?.length ?? 0;
 
     const sent = await deliver(
