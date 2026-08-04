@@ -118,11 +118,15 @@ function EventWorkspace() {
     ? photos.filter((p) => p.assigned_person_id === selected.id).length
     : 0;
 
+  const albumUrl = data?.event?.public_token
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/album/${data.event.public_token}`
+    : "";
+
   useEffect(() => {
     let cancelled = false;
     if (!galleryUrl || assignedCount === 0) {
       setQrDataUrl(null);
-      return;
+      return undefined;
     }
     QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }).then((url) => {
       if (!cancelled) setQrDataUrl(url);
@@ -131,6 +135,21 @@ function EventWorkspace() {
       cancelled = true;
     };
   }, [galleryUrl, assignedCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!albumUrl) {
+      setAlbumQrDataUrl(null);
+      return undefined;
+    }
+    QRCode.toDataURL(albumUrl, { width: 512, margin: 1 }).then((url) => {
+      if (!cancelled) setAlbumQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [albumUrl]);
+
 
 
   return (
