@@ -1,13 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import {
-  confirmTestPayment,
-  getGuestGallery,
-  startGuestCheckout,
-} from "@/lib/guest.functions";
+import { useCallback, useMemo, useState } from "react";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
+import { getGuestGallery, startGuestCheckout } from "@/lib/guest.functions";
 import { formatGBP, priceForSelection } from "@/lib/pricing";
+import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/gallery/$token/")({
   head: () => ({
@@ -27,10 +26,11 @@ function GuestGallery() {
   const navigate = useNavigate();
   const fetchGallery = useServerFn(getGuestGallery);
   const checkout = useServerFn(startGuestCheckout);
-  const confirm = useServerFn(confirmTestPayment);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["gallery", token],
@@ -38,13 +38,25 @@ function GuestGallery() {
     retry: false,
   });
 
-  const pay = useMutation({
-    mutationFn: async () => {
-      const order = await checkout({ data: { token, photoIds: [...selected] } });
-      await confirm({ data: { token, orderId: order.orderId } });
-    },
-    onSuccess: () => navigate({ to: "/gallery/$token/downloads", params: { token } }),
-  });
+  // Frozen at the moment checkout opens so the provider never sees a new
+  // client secret mid-session.
+  const [checkoutIds, setCheckoutIds] = useState<string[] | null>(null);
+
+  const fetchClientSecret = useCallback(async () => {
+    const result = await checkout({
+      data: {
+        token,
+        photoIds: checkoutIds ?? [],
+        returnUrl: `${window.location.origin}/gallery/${token}/downloads?session_id={CHECKOUT_SESSION_ID}`,
+        environment: getStripeEnvironment(),
+      },
+    });
+    if ("error" in result) throw new Error(result.error);
+    if (!result.clientSecret) throw new Error("Checkout could not be started");
+    return result.clientSecret;
+  }, [checkout, checkoutIds, token]);
+
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   if (isLoading) {
     return <Shell><p className="text-muted-foreground">Finding your photos…</p></Shell>;
@@ -61,6 +73,28 @@ function GuestGallery() {
   }
 
   const total = priceForSelection(selected.size, data.photos.length);
+
+  if (checkoutIds) {
+    return (
+      <main className="min-h-screen bg-background">
+        <PaymentTestModeBanner />
+        <div className="mx-auto max-w-3xl px-5 py-10">
+          <button
+            onClick={() => {
+              setCheckoutIds(null);
+              setPaying(false);
+            }}
+            className="mb-6 text-sm text-muted-foreground underline-offset-4 hover:underline"
+          >
+            ← Back to your photos
+          </button>
+          <EmbeddedCheckoutProvider stripe={getStripe()} options={checkoutOptions}>
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background pb-32">
@@ -136,6 +170,7 @@ function GuestGallery() {
               <p className="font-medium">
                 {selected.size} selected · {formatGBP(total)}
               </p>
+              {payError && <p className="text-xs text-destructive">{payError}</p>}
               <button
                 onClick={() => setSelected(new Set(data.photos.map((p) => p.id)))}
                 className="text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -144,11 +179,21 @@ function GuestGallery() {
               </button>
             </div>
             <button
-              disabled={selected.size === 0 || pay.isPending}
-              onClick={() => pay.mutate()}
+              disabled={selected.size === 0 || paying}
+              onClick={() => {
+                setPayError(null);
+                try {
+                  getStripeEnvironment();
+                } catch (e) {
+                  setPayError(e instanceof Error ? e.message : "Checkout unavailable");
+                  return;
+                }
+                setPaying(true);
+                setCheckoutIds([...selected]);
+              }}
               className="rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
-              {pay.isPending ? "Processing…" : "Continue to checkout"}
+              {paying ? "Opening checkout…" : "Continue to checkout"}
             </button>
           </div>
         </div>

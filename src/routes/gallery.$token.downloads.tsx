@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getGuestDownloads } from "@/lib/guest.functions";
+import { getGuestDownloads, settleGuestCheckout } from "@/lib/guest.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/gallery/$token/downloads")({
+  validateSearch: (search: Record<string, unknown>): { session_id?: string | undefined } => ({
+    session_id: typeof search["session_id"] === "string" ? search["session_id"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Your downloads" },
@@ -18,12 +22,34 @@ export const Route = createFileRoute("/gallery/$token/downloads")({
 
 function Downloads() {
   const { token } = Route.useParams();
+  const { session_id: sessionId } = Route.useSearch();
   const fetchDownloads = useServerFn(getGuestDownloads);
-  const { data, isLoading } = useQuery({
-    queryKey: ["downloads", token],
+  const settle = useServerFn(settleGuestCheckout);
+
+  // Stripe returns here right after payment. Confirm settlement with Stripe
+  // server-side (the webhook does the same, whichever lands first wins).
+  const { isLoading: settling } = useQuery({
+    queryKey: ["settle", token, sessionId],
+    enabled: Boolean(sessionId),
+    retry: 3,
+    retryDelay: 1500,
+    queryFn: async () => {
+      const result = await settle({
+        data: { token, sessionId: sessionId!, environment: getStripeEnvironment() },
+      });
+      if (!result.paid) throw new Error("Payment still processing");
+      return result;
+    },
+  });
+
+  const { data, isLoading: loadingFiles } = useQuery({
+    queryKey: ["downloads", token, sessionId],
     queryFn: () => fetchDownloads({ data: { token } }),
+    enabled: !settling,
     retry: false,
   });
+
+  const isLoading = settling || loadingFiles;
 
   async function downloadAll() {
     for (const photo of data?.photos ?? []) {
