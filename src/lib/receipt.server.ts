@@ -169,7 +169,7 @@ export async function sendOrderReceipt(
       email,
       `Your photos from ${event.name}`,
       receiptHtml({
-        personName: person.name,
+        personName: person?.name ?? "there",
         eventName: event.name,
         photoCount,
         amountPence: order.amount_pence ?? 0,
