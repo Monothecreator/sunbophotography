@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { priceForSelection } from "./pricing";
+import { priceForSelection, tiersFromEvent } from "./pricing";
 import {
   createStripeClient,
   getStripeErrorMessage,
@@ -40,7 +40,9 @@ async function resolveToken(db: Awaited<ReturnType<typeof admin>>, token: string
   if (!person) throw new Error("This gallery link is not valid");
   const { data: event } = await db
     .from("events")
-    .select("id, name, date, photographer_id, status")
+    .select(
+      "id, name, date, photographer_id, status, price_single_pence, price_five_pence, price_gallery_pence",
+    )
     .eq("id", person.event_id)
     .maybeSingle();
   if (!event || event.status !== "active") throw new Error("This gallery is no longer available");
@@ -85,6 +87,7 @@ export const getGuestGallery = createServerFn({ method: "POST" })
       personName: person.name,
       eventName: event.name,
       eventDate: event.date,
+      tiers: tiersFromEvent(event),
       photos: items,
       paidCount: items.filter((i) => i.paid).length,
     };
@@ -126,7 +129,17 @@ export const startGuestCheckout = createServerFn({ method: "POST" })
     const photoIds = data.photoIds.filter((id) => allowed.has(id));
     if (photoIds.length === 0) throw new Error("Those photos are not part of your gallery");
 
-    const amount = priceForSelection(photoIds.length, allowed.size);
+    // Stale pending orders (abandoned checkouts) are retired so they never
+    // linger as phantom revenue or block a fresh purchase.
+    const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await db
+      .from("orders")
+      .update({ status: "expired" })
+      .eq("person_id", person.id)
+      .eq("status", "pending")
+      .lt("created_at", staleCutoff);
+
+    const amount = priceForSelection(photoIds.length, allowed.size, tiersFromEvent(event));
     if (amount <= 0) throw new Error("Nothing to pay for");
 
     const { data: order, error } = await db
@@ -179,17 +192,17 @@ export const startGuestCheckout = createServerFn({ method: "POST" })
       try {
         // Preferred: Stripe handles tax compliance, fraud, disputes and
         // transaction support end to end.
-        session = await stripe.checkout.sessions.create({
-          ...params,
-          managed_payments: { enabled: true },
-        } as Stripe.Checkout.SessionCreateParams);
+        session = await stripe.checkout.sessions.create(
+          { ...params, managed_payments: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
+          { idempotencyKey: `order_${order.id}_managed` },
+        );
       } catch {
         // Fall back to tax calculation and collection only if the seller
         // account is not eligible for full compliance handling.
-        session = await stripe.checkout.sessions.create({
-          ...params,
-          automatic_tax: { enabled: true },
-        } as Stripe.Checkout.SessionCreateParams);
+        session = await stripe.checkout.sessions.create(
+          { ...params, automatic_tax: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
+          { idempotencyKey: `order_${order.id}_tax` },
+        );
       }
 
       await db.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
@@ -236,9 +249,14 @@ export const settleGuestCheckout = createServerFn({ method: "POST" })
 
       await db
         .from("orders")
-        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          stripe_payment_intent_id:
+            typeof session.payment_intent === "string" ? session.payment_intent : null,
+        })
         .eq("id", order.id)
-        .eq("status", "pending");
+        .in("status", ["pending", "expired"]);
       const { sendOrderReceipt } = await import("./receipt.server");
       await sendOrderReceipt(db, order.id, data.environment);
       return { paid: true };
@@ -315,9 +333,14 @@ export const getGuestCheckoutStatus = createServerFn({ method: "POST" })
         if (session.payment_status !== "unpaid") {
           await db
             .from("orders")
-            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string" ? session.payment_intent : null,
+            })
             .eq("id", order.id)
-            .eq("status", "pending");
+            .in("status", ["pending", "expired"]);
           const { sendOrderReceipt } = await import("./receipt.server");
           await sendOrderReceipt(db, order.id, data.environment);
           return { ...details, status: "paid", message: "Payment received." };
