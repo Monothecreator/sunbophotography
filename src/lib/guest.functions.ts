@@ -245,6 +245,104 @@ export const settleGuestCheckout = createServerFn({ method: "POST" })
     }
   });
 
+export type GuestPaymentStatus = "paid" | "pending" | "failed" | "unknown";
+
+/**
+ * Status page read. Same server-side truth as settleGuestCheckout (it settles
+ * the order when Stripe says the money landed) but reports a richer state so
+ * the guest can see whether a slow payment method is still clearing.
+ */
+export const getGuestCheckoutStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; sessionId: string; environment: StripeEnv }) =>
+    z
+      .object({
+        token: tokenSchema,
+        sessionId: z.string().min(10).max(200).regex(/^cs_[A-Za-z0-9_]+$/),
+        environment: envSchema,
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      status: GuestPaymentStatus;
+      personName: string;
+      eventName: string;
+      photoCount: number;
+      amountPence: number;
+      message: string;
+    }> => {
+      const db = await admin();
+      const { person, event } = await resolveToken(db, data.token);
+
+      const base = { personName: person.name, eventName: event.name };
+
+      const { data: order } = await db
+        .from("orders")
+        .select("id, status, photo_ids, amount_pence")
+        .eq("stripe_session_id", data.sessionId)
+        .eq("person_id", person.id)
+        .maybeSingle();
+
+      if (!order) {
+        return {
+          ...base,
+          status: "unknown",
+          photoCount: 0,
+          amountPence: 0,
+          message: "We couldn't find a payment matching this link.",
+        };
+      }
+
+      const details = {
+        ...base,
+        photoCount: order.photo_ids?.length ?? 0,
+        amountPence: order.amount_pence ?? 0,
+      };
+
+      if (order.status === "paid") {
+        return { ...details, status: "paid", message: "Payment received." };
+      }
+
+      try {
+        const stripe = createStripeClient(data.environment);
+        const session = await stripe.checkout.sessions.retrieve(data.sessionId);
+
+        if (session.payment_status !== "unpaid") {
+          await db
+            .from("orders")
+            .update({ status: "paid", paid_at: new Date().toISOString() })
+            .eq("id", order.id)
+            .eq("status", "pending");
+          return { ...details, status: "paid", message: "Payment received." };
+        }
+
+        if (session.status === "expired") {
+          return {
+            ...details,
+            status: "failed",
+            message: "This checkout expired before payment completed.",
+          };
+        }
+
+        return {
+          ...details,
+          status: "pending",
+          message: "Your payment is still clearing with your bank.",
+        };
+      } catch {
+        return {
+          ...details,
+          status: "pending",
+          message: "We're still confirming your payment.",
+        };
+      }
+    },
+  );
+
+
+
 export const getGuestDownloads = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string }) => z.object({ token: tokenSchema }).parse(d))
   .handler(async ({ data }) => {

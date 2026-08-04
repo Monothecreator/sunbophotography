@@ -47,7 +47,7 @@ function GuestGallery() {
       data: {
         token,
         photoIds: checkoutIds ?? [],
-        returnUrl: `${window.location.origin}/gallery/${token}/downloads?session_id={CHECKOUT_SESSION_ID}`,
+        returnUrl: `${window.location.origin}/gallery/${token}/status?session_id={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),
       },
     });
