@@ -33,6 +33,10 @@ function Dashboard() {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
 
+  const fetchBalance = useServerFn(getPayoutBalance);
+  const doPayout = useServerFn(createPayout);
+  const fetchPayouts = useServerFn(listPayouts);
+
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -169,12 +173,169 @@ function Dashboard() {
                 <ApplePayStatusCard />
               </div>
             </div>
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold">Withdraw funds</h2>
+              <div className="mt-3">
+                <PayoutsCard
+                  fetchBalance={fetchBalance}
+                  doPayout={doPayout}
+                  fetchPayouts={fetchPayouts}
+                />
+              </div>
+            </div>
           </section>
         </div>
       </div>
     </main>
   );
 }
+
+function PayoutsCard({
+  fetchBalance,
+  doPayout,
+  fetchPayouts,
+}: {
+  fetchBalance: ReturnType<typeof useServerFn<typeof getPayoutBalance>>;
+  doPayout: ReturnType<typeof useServerFn<typeof createPayout>>;
+  fetchPayouts: ReturnType<typeof useServerFn<typeof listPayouts>>;
+}) {
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [result, setResult] = useState<
+    | { type: "success"; payoutId: string; amountPence: number; status: string }
+    | { type: "error"; message: string }
+    | null
+  >(null);
+
+  const balanceQuery = useQuery({
+    queryKey: ["payout-balance"],
+    queryFn: () => fetchBalance({ data: { environment: getStripeEnvironment() } }),
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+
+  const payoutsQuery = useQuery({
+    queryKey: ["payouts-list"],
+    queryFn: () => fetchPayouts({ data: {} }),
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+
+  async function withdraw() {
+    if (withdrawing) return;
+    setWithdrawing(true);
+    setResult(null);
+    try {
+      const res = await doPayout({ data: { environment: getStripeEnvironment() } });
+      if ("error" in res) {
+        setResult({ type: "error", message: res.error });
+      } else {
+        setResult({
+          type: "success",
+          payoutId: res.stripePayoutId,
+          amountPence: res.amountPence,
+          status: res.status,
+        });
+        await Promise.all([
+          balanceQuery.refetch(),
+          payoutsQuery.refetch(),
+        ]);
+      }
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+
+  const balance = balanceQuery.data && !("error" in balanceQuery.data)
+    ? balanceQuery.data
+    : null;
+  const payouts = payoutsQuery.data && !("error" in payoutsQuery.data)
+    ? payoutsQuery.data.payouts
+    : [];
+
+  return (
+    <div className="surface p-4">
+      {balanceQuery.isLoading && <p className="text-sm text-muted-foreground">Loading balance…</p>}
+      {balanceQuery.data && "error" in balanceQuery.data && (
+        <p className="text-sm text-destructive">{balanceQuery.data.error}</p>
+      )}
+      {balance && (
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Available to withdraw
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold">{formatGBP(balance.availablePence)}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Pending</p>
+              <p className="font-medium">{formatGBP(balance.pendingPence)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Instant available</p>
+              <p className="font-medium">{formatGBP(balance.instantAvailablePence)}</p>
+            </div>
+          </div>
+          <button
+            onClick={withdraw}
+            disabled={withdrawing || balance.availablePence <= 0}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            {withdrawing ? "Withdrawing…" : "Withdraw available balance"}
+          </button>
+          <p className="text-xs text-muted-foreground">
+            Withdrawals send the full available balance to your connected bank account. If your
+            Stripe account uses automatic payouts, withdrawals are handled automatically and the
+            button will show Stripe's response.
+          </p>
+        </div>
+      )}
+
+      {result?.type === "success" && (
+        <div className="mt-4 rounded-md bg-green-100 p-3 text-sm text-green-800">
+          <p className="font-medium">Withdrawal started</p>
+          <p className="mt-1">
+            {formatGBP(result.amountPence)} · Stripe payout {result.payoutId} · {result.status}
+          </p>
+        </div>
+      )}
+      {result?.type === "error" && (
+        <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="font-medium">Could not withdraw</p>
+          <p className="mt-1">{result.message}</p>
+        </div>
+      )}
+
+      {payouts.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Recent withdrawals
+          </p>
+          <ul className="mt-2 space-y-2">
+            {payouts.map((p: PayoutRow) => (
+              <li key={p.id} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</span>
+                <span className="font-medium">{formatGBP(p.amount_pence)}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${
+                    p.status === "paid"
+                      ? "bg-green-100 text-green-800"
+                      : p.status === "in_transit"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {p.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
