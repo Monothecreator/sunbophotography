@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
+import { Route as AlbumTokenIndexRouteImport } from './routes/album.$token.index'
 import { Route as GalleryTokenIndexRouteImport } from './routes/gallery.$token.index'
 import { Route as GalleryTokenDownloadsRouteImport } from './routes/gallery.$token.downloads'
 import { Route as GalleryTokenStatusRouteImport } from './routes/gallery.$token.status'
@@ -39,6 +40,11 @@ const AuthenticatedDashboardIndexRoute =
     path: '/dashboard/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AlbumTokenIndexRoute = AlbumTokenIndexRouteImport.update({
+  id: '/album/$token/',
+  path: '/album/$token/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GalleryTokenIndexRoute = GalleryTokenIndexRouteImport.update({
   id: '/gallery/$token/',
   path: '/gallery/$token/',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/album/$token/': typeof AlbumTokenIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/album/$token': typeof AlbumTokenIndexRoute
   '/gallery/$token': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
   '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/album/$token/': typeof AlbumTokenIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/_authenticated/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/dashboard/'
+    | '/album/$token/'
     | '/gallery/$token/'
     | '/dashboard/events/$eventId'
     | '/api/public/payments/webhook'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/dashboard'
+    | '/album/$token'
     | '/gallery/$token'
     | '/dashboard/events/$eventId'
     | '/api/public/payments/webhook'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/gallery/$token/downloads'
     | '/gallery/$token/status'
     | '/_authenticated/dashboard/'
+    | '/album/$token/'
     | '/gallery/$token/'
     | '/_authenticated/dashboard/events/$eventId'
     | '/api/public/payments/webhook'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   GalleryTokenDownloadsRoute: typeof GalleryTokenDownloadsRoute
   GalleryTokenStatusRoute: typeof GalleryTokenStatusRoute
+  AlbumTokenIndexRoute: typeof AlbumTokenIndexRoute
   GalleryTokenIndexRoute: typeof GalleryTokenIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/album/$token/': {
+      id: '/album/$token/'
+      path: '/album/$token'
+      fullPath: '/album/$token/'
+      preLoaderRoute: typeof AlbumTokenIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/gallery/$token/': {
       id: '/gallery/$token/'
@@ -231,6 +251,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   GalleryTokenDownloadsRoute: GalleryTokenDownloadsRoute,
   GalleryTokenStatusRoute: GalleryTokenStatusRoute,
+  AlbumTokenIndexRoute: AlbumTokenIndexRoute,
   GalleryTokenIndexRoute: GalleryTokenIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
