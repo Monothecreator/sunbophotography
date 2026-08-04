@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { makeWatermarkedPreview } from "@/lib/watermark";
@@ -118,10 +118,20 @@ function EventWorkspace() {
     ? photos.filter((p) => p.assigned_person_id === selected.id).length
     : 0;
 
-  async function showQr() {
-    if (!galleryUrl) return;
-    setQrDataUrl(await QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }));
-  }
+  useEffect(() => {
+    let cancelled = false;
+    if (!galleryUrl || assignedCount === 0) {
+      setQrDataUrl(null);
+      return;
+    }
+    QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }).then((url) => {
+      if (!cancelled) setQrDataUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [galleryUrl, assignedCount]);
+
 
   return (
     <main className="min-h-screen bg-background">
@@ -240,12 +250,6 @@ function EventWorkspace() {
                   >
                     Copy link
                   </button>
-                  <button
-                    onClick={showQr}
-                    className="rounded-md border border-border px-3 py-1.5 text-xs"
-                  >
-                    Show QR
-                  </button>
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(`Your photos are ready: ${galleryUrl}`)}`}
                     target="_blank"
@@ -261,18 +265,28 @@ function EventWorkspace() {
                     Email
                   </a>
                 </div>
-                {qrDataUrl && (
+                {qrDataUrl ? (
                   <div className="space-y-2">
-                    <img src={qrDataUrl} alt={`QR code for ${selected.name}`} className="w-40" />
+                    <img
+                      src={qrDataUrl}
+                      alt={`QR code linking to ${selected.name}'s photo gallery`}
+                      className="w-40 rounded-md bg-white p-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Scanning opens {selected.name}&rsquo;s gallery to preview and pay — no login.
+                    </p>
                     <a
                       href={qrDataUrl}
-                      download={`${selected.name}-gallery.png`}
+                      download={`${selected.name}-gallery-qr.png`}
                       className="inline-block text-xs underline"
                     >
                       Download PNG
                     </a>
                   </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Generating QR code…</p>
                 )}
+
               </div>
             )}
           </div>
