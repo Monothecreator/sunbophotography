@@ -1,0 +1,324 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import QRCode from "qrcode";
+import { supabase } from "@/integrations/supabase/client";
+import { makeWatermarkedPreview } from "@/lib/watermark";
+import { formatGBP } from "@/lib/pricing";
+
+export const Route = createFileRoute("/_authenticated/dashboard/events/$eventId")({
+  head: () => ({
+    meta: [
+      { title: "Event workspace — Aperture&Ember" },
+      { name: "description", content: "Upload photos, match guests and share QR galleries." },
+      { property: "og:title", content: "Event workspace — Aperture&Ember" },
+      { property: "og:description", content: "Upload photos and share guest galleries." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: EventWorkspace,
+});
+
+type PreviewPhoto = {
+  id: string;
+  preview_path: string;
+  assigned_person_id: string | null;
+  url: string;
+};
+
+function EventWorkspace() {
+  const { eventId } = Route.useParams();
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
+  const [personName, setPersonName] = useState("");
+  const [activePerson, setActivePerson] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ["event", eventId],
+    queryFn: async () => {
+      const [{ data: event }, { data: people }, { data: photos }, { data: orders }] =
+        await Promise.all([
+          supabase.from("events").select("*").eq("id", eventId).maybeSingle(),
+          supabase.from("people").select("*").eq("event_id", eventId).order("created_at"),
+          supabase.from("photos").select("*").eq("event_id", eventId).order("created_at"),
+          supabase.from("orders").select("*").eq("event_id", eventId).eq("status", "paid"),
+        ]);
+      const withUrls: PreviewPhoto[] = await Promise.all(
+        (photos ?? []).map(async (p) => {
+          const { data: signed } = await supabase.storage
+            .from("previews")
+            .createSignedUrl(p.preview_path, 3600);
+          return {
+            id: p.id,
+            preview_path: p.preview_path,
+            assigned_person_id: p.assigned_person_id,
+            url: signed?.signedUrl ?? "",
+          };
+        }),
+      );
+      return { event, people: people ?? [], photos: withUrls, orders: orders ?? [] };
+    },
+  });
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("business_name")
+      .eq("id", user.user.id)
+      .maybeSingle();
+
+    setUploading({ done: 0, total: files.length });
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]!;
+      const base = `${user.user.id}/${eventId}/${crypto.randomUUID()}`;
+      const preview = await makeWatermarkedPreview(file, profile?.business_name ?? "");
+      await supabase.storage.from("originals").upload(`${base}-full`, file, {
+        contentType: file.type,
+      });
+      await supabase.storage.from("previews").upload(`${base}-preview.jpg`, preview, {
+        contentType: "image/jpeg",
+      });
+      await supabase.from("photos").insert({
+        event_id: eventId,
+        file_path: `${base}-full`,
+        preview_path: `${base}-preview.jpg`,
+        filename: file.name,
+      });
+      setUploading({ done: i + 1, total: files.length });
+    }
+    setUploading(null);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function addPerson(e: React.FormEvent) {
+    e.preventDefault();
+    await supabase.from("people").insert({ event_id: eventId, name: personName });
+    setPersonName("");
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function toggleAssign(photoId: string, current: string | null) {
+    if (!activePerson) return;
+    const next = current === activePerson ? null : activePerson;
+    await supabase.from("photos").update({ assigned_person_id: next }).eq("id", photoId);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  const people = data?.people ?? [];
+  const photos = data?.photos ?? [];
+  const selected = people.find((p) => p.id === activePerson);
+  const galleryUrl = selected
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/gallery/${selected.qr_token}`
+    : "";
+  const assignedCount = selected
+    ? photos.filter((p) => p.assigned_person_id === selected.id).length
+    : 0;
+
+  async function showQr() {
+    if (!galleryUrl) return;
+    setQrDataUrl(await QRCode.toDataURL(galleryUrl, { width: 512, margin: 1 }));
+  }
+
+  return (
+    <main className="min-h-screen bg-background">
+      <header className="border-b border-border">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Dashboard
+          </Link>
+          <span className="font-display text-base font-semibold">{data?.event?.name ?? ""}</span>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl space-y-10 px-6 py-8">
+        <section>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
+              <p className="text-sm text-muted-foreground">
+                {data?.event?.date ?? "No date"} · {photos.length} photos ·{" "}
+                {formatGBP((data?.orders ?? []).reduce((s, o) => s + o.amount_pence, 0))} earned
+              </p>
+            </div>
+            <label className="cursor-pointer rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+              Upload photos
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
+          </div>
+
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFiles(e.dataTransfer.files);
+            }}
+            className="mt-4 rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground"
+          >
+            Drag and drop images here — previews are watermarked before they leave your machine.
+          </div>
+
+          {uploading && (
+            <div className="mt-3">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(uploading.done / uploading.total) * 100}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Uploading {uploading.done} of {uploading.total}
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="grid gap-8 lg:grid-cols-[1fr_2fr]">
+          <div>
+            <h2 className="text-lg font-semibold">People</h2>
+            <form onSubmit={addPerson} className="mt-3 flex gap-2">
+              <input
+                required
+                value={personName}
+                onChange={(e) => setPersonName(e.target.value)}
+                placeholder="e.g. John"
+                className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <button className="rounded-md bg-secondary px-4 py-2 text-sm font-medium">Add</button>
+            </form>
+
+            <ul className="mt-4 space-y-2">
+              {people.map((p) => {
+                const count = photos.filter((ph) => ph.assigned_person_id === p.id).length;
+                return (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => {
+                        setActivePerson(p.id === activePerson ? null : p.id);
+                        setQrDataUrl(null);
+                      }}
+                      className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
+                        activePerson === p.id
+                          ? "border-primary bg-accent/50"
+                          : "border-border hover:bg-accent/30"
+                      }`}
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{count} photos</span>
+                    </button>
+                  </li>
+                );
+              })}
+              {people.length === 0 && (
+                <li className="text-sm text-muted-foreground">
+                  No people yet. Add one, then tick their photos.
+                </li>
+              )}
+            </ul>
+
+            {selected && assignedCount > 0 && (
+              <div className="surface mt-5 space-y-3 p-4">
+                <p className="text-sm font-medium">{selected.name}&rsquo;s private gallery</p>
+                <input
+                  readOnly
+                  value={galleryUrl}
+                  className="w-full rounded-md border border-input bg-muted px-2 py-1.5 text-xs"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(galleryUrl)}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    Copy link
+                  </button>
+                  <button
+                    onClick={showQr}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    Show QR
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Your photos are ready: ${galleryUrl}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    WhatsApp
+                  </a>
+                  <a
+                    href={`mailto:?subject=Your photos&body=${encodeURIComponent(galleryUrl)}`}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs"
+                  >
+                    Email
+                  </a>
+                </div>
+                {qrDataUrl && (
+                  <div className="space-y-2">
+                    <img src={qrDataUrl} alt={`QR code for ${selected.name}`} className="w-40" />
+                    <a
+                      href={qrDataUrl}
+                      download={`${selected.name}-gallery.png`}
+                      className="inline-block text-xs underline"
+                    >
+                      Download PNG
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold">
+              Photos
+              {selected && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  click to assign to {selected.name}
+                </span>
+              )}
+            </h2>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {photos.map((p) => {
+                const mine = selected && p.assigned_person_id === selected.id;
+                const owner = people.find((pp) => pp.id === p.assigned_person_id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggleAssign(p.id, p.assigned_person_id)}
+                    className={`group relative overflow-hidden rounded-md border ${
+                      mine ? "border-primary ring-2 ring-ring" : "border-border"
+                    }`}
+                  >
+                    <img
+                      src={p.url}
+                      alt="Event preview"
+                      loading="lazy"
+                      className="aspect-square w-full object-cover"
+                    />
+                    {owner && (
+                      <span className="absolute bottom-1 left-1 rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background">
+                        {owner.name}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {photos.length === 0 && (
+                <p className="col-span-full text-sm text-muted-foreground">No photos yet.</p>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
