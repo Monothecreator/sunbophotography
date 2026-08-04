@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.update_payouts_updated_at() FROM anon, authenticated;
