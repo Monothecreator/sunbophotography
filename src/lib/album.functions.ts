@@ -102,7 +102,17 @@ export const startAlbumCheckout = createServerFn({ method: "POST" })
     const photoIds = data.photoIds.filter((id) => allowed.has(id));
     if (photoIds.length === 0) throw new Error("Those photos are not part of this album");
 
-    const amount = priceForSelection(photoIds.length, allowed.size);
+    // Retire abandoned checkouts for this album so they don't linger as pending.
+    const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await db
+      .from("orders")
+      .update({ status: "expired" })
+      .eq("event_id", event.id)
+      .is("person_id", null)
+      .eq("status", "pending")
+      .lt("created_at", staleCutoff);
+
+    const amount = priceForSelection(photoIds.length, allowed.size, tiersFromEvent(event));
     if (amount <= 0) throw new Error("Nothing to pay for");
 
     const { data: order, error } = await db
