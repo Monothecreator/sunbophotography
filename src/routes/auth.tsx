@@ -152,7 +152,9 @@ function AuthPage() {
           >
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
-        </form>
+          </form>
+        </div>
+
 
         <button
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
