@@ -22,10 +22,17 @@ async function settleOrder(session: any, env: StripeEnv, origin?: string) {
   if (!orderId && !sessionId) return;
 
   const db = getSupabase();
+  const paymentIntentId =
+    typeof session?.payment_intent === "string" ? session.payment_intent : null;
+
   const query = db
     .from("orders")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("status", "pending")
+    .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      stripe_payment_intent_id: paymentIntentId,
+    })
+    .in("status", ["pending", "expired"])
     .select("id");
 
   const { data, error } = orderId
@@ -41,6 +48,49 @@ async function settleOrder(session: any, env: StripeEnv, origin?: string) {
   if (settledId) await sendOrderReceipt(db, settledId, env, origin);
 }
 
+
+/** Abandoned/expired checkout: retire the pending order so it isn't phantom revenue. */
+async function markExpired(session: any) {
+  const orderId = session?.metadata?.orderId;
+  const db = getSupabase();
+  const q = db.from("orders").update({ status: "expired" }).eq("status", "pending");
+  if (orderId) await q.eq("id", orderId);
+  else if (session?.id) await q.eq("stripe_session_id", session.id);
+}
+
+/**
+ * Refunds and disputes revoke entitlement: a fully refunded or disputed order
+ * stops granting downloads and stops counting towards revenue.
+ */
+async function revokeForCharge(charge: any, reason: "refunded" | "disputed") {
+  const paymentIntentId =
+    typeof charge?.payment_intent === "string" ? charge.payment_intent : null;
+  if (!paymentIntentId) return;
+
+  const db = getSupabase();
+  const { data: order } = await db
+    .from("orders")
+    .select("id, amount_pence")
+    .eq("stripe_payment_intent_id", paymentIntentId)
+    .maybeSingle();
+  if (!order) return;
+
+  const refunded =
+    reason === "disputed"
+      ? (charge?.amount ?? order.amount_pence ?? 0)
+      : (charge?.amount_refunded ?? 0);
+  const full = refunded >= (order.amount_pence ?? 0);
+
+  await db
+    .from("orders")
+    .update({
+      refunded_pence: refunded,
+      refunded_at: new Date().toISOString(),
+      // Partial refunds keep access; a full refund or dispute removes it.
+      ...(full ? { status: reason } : {}),
+    })
+    .eq("id", order.id);
+}
 
 async function markFailed(session: any) {
   const orderId = session?.metadata?.orderId;
@@ -69,6 +119,21 @@ async function handleWebhook(req: Request, env: StripeEnv) {
 
     case "checkout.session.async_payment_failed":
       await markFailed(event.data.object);
+      break;
+    case "checkout.session.expired":
+      await markExpired(event.data.object);
+      break;
+    case "charge.refunded":
+    case "refund.updated":
+      await revokeForCharge(event.data.object, "refunded");
+      break;
+    case "charge.dispute.created":
+      await revokeForCharge(
+        (event.data.object as any)?.charge
+          ? { payment_intent: (event.data.object as any)?.payment_intent, amount: (event.data.object as any)?.amount }
+          : event.data.object,
+        "disputed",
+      );
       break;
     default:
       console.log("Unhandled event:", event.type);
