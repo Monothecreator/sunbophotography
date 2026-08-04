@@ -22,6 +22,9 @@ export type Database = {
           id: string
           name: string
           photographer_id: string
+          price_five_pence: number
+          price_gallery_pence: number
+          price_single_pence: number
           public_token: string
           status: string
         }
@@ -32,6 +35,9 @@ export type Database = {
           id?: string
           name: string
           photographer_id: string
+          price_five_pence?: number
+          price_gallery_pence?: number
+          price_single_pence?: number
           public_token?: string
           status?: string
         }
@@ -42,6 +48,9 @@ export type Database = {
           id?: string
           name?: string
           photographer_id?: string
+          price_five_pence?: number
+          price_gallery_pence?: number
+          price_single_pence?: number
           public_token?: string
           status?: string
         }
@@ -94,7 +103,10 @@ export type Database = {
           photo_ids: string[]
           receipt_email: string | null
           receipt_sent_at: string | null
+          refunded_at: string | null
+          refunded_pence: number
           status: string
+          stripe_payment_intent_id: string | null
           stripe_session_id: string | null
         }
         Insert: {
@@ -107,7 +119,10 @@ export type Database = {
           photo_ids?: string[]
           receipt_email?: string | null
           receipt_sent_at?: string | null
+          refunded_at?: string | null
+          refunded_pence?: number
           status?: string
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
         }
         Update: {
@@ -120,7 +135,10 @@ export type Database = {
           photo_ids?: string[]
           receipt_email?: string | null
           receipt_sent_at?: string | null
+          refunded_at?: string | null
+          refunded_pence?: number
           status?: string
+          stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
         }
         Relationships: [
