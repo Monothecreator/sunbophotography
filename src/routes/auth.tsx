@@ -65,6 +65,7 @@ function AuthPage() {
       setMessage(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setBusy(false);
+    }
   }
 
   async function signInWithGoogle() {
@@ -82,7 +83,6 @@ function AuthPage() {
     navigate({ to: "/dashboard", replace: true });
   }
 
-  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
