@@ -89,6 +89,8 @@ export type Database = {
           paid_at: string | null
           person_id: string
           photo_ids: string[]
+          receipt_email: string | null
+          receipt_sent_at: string | null
           status: string
           stripe_session_id: string | null
         }
@@ -100,6 +102,8 @@ export type Database = {
           paid_at?: string | null
           person_id: string
           photo_ids?: string[]
+          receipt_email?: string | null
+          receipt_sent_at?: string | null
           status?: string
           stripe_session_id?: string | null
         }
@@ -111,6 +115,8 @@ export type Database = {
           paid_at?: string | null
           person_id?: string
           photo_ids?: string[]
+          receipt_email?: string | null
+          receipt_sent_at?: string | null
           status?: string
           stripe_session_id?: string | null
         }
