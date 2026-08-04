@@ -1,0 +1,36 @@
+name: Apple Pay readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Stripe environment to check
+        type: choice
+        options: [sandbox, live]
+        default: sandbox
+  schedule:
+    # Daily at 07:00 UTC — catches Apple Pay being switched off in Stripe.
+    - cron: "0 7 * * *"
+
+jobs:
+  check:
+    name: Verify Apple Pay is enabled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Apple Pay readiness preflight
+        env:
+          LOVABLE_API_KEY: ${{ secrets.LOVABLE_API_KEY }}
+          STRIPE_SANDBOX_API_KEY: ${{ secrets.STRIPE_SANDBOX_API_KEY }}
+          STRIPE_LIVE_API_KEY: ${{ secrets.STRIPE_LIVE_API_KEY }}
+        run: bun run scripts/check-apple-pay-readiness.ts ${{ inputs.environment || 'sandbox' }}
