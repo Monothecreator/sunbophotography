@@ -29,12 +29,36 @@ function AuthPage() {
   const [businessName, setBusinessName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [, setRecovering] = useState(false);
 
   useEffect(() => {
+    // A recovery link drops the user here with a live session; send them to
+    // account settings to set a new password instead of bouncing to the dashboard.
+    if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
+      setRecovering(true);
+      navigate({ to: "/dashboard/account", replace: true });
+      return;
+    }
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
+
+  async function sendReset() {
+    if (!email) {
+      setMessage("Enter your email above first, then tap reset.");
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setBusy(false);
+    setMessage(
+      error ? error.message : "If that email has an account, a reset link is on its way.",
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,6 +178,16 @@ function AuthPage() {
           >
             {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </button>
+          {mode === "login" && (
+            <button
+              type="button"
+              onClick={sendReset}
+              disabled={busy}
+              className="w-full text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Forgot your password?
+            </button>
+          )}
           </form>
         </div>
 

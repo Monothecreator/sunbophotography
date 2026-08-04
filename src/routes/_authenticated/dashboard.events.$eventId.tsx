@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { makeWatermarkedPreview } from "@/lib/watermark";
 import { formatGBP } from "@/lib/pricing";
+import { EventPricingCard } from "@/components/EventPricingCard";
 
 export const Route = createFileRoute("/_authenticated/dashboard/events/$eventId")({
   head: () => ({
@@ -171,7 +172,13 @@ function EventWorkspace() {
               <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
               <p className="text-sm text-muted-foreground">
                 {data?.event?.date ?? "No date"} · {photos.length} photos ·{" "}
-                {formatGBP((data?.orders ?? []).reduce((s, o) => s + o.amount_pence, 0))} earned
+                {formatGBP(
+                  (data?.orders ?? []).reduce(
+                    (s, o) => s + o.amount_pence - (o.refunded_pence ?? 0),
+                    0,
+                  ),
+                )}{" "}
+                earned
               </p>
             </div>
             <label className="cursor-pointer rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
@@ -196,6 +203,17 @@ function EventWorkspace() {
           >
             Drag and drop images here — previews are watermarked before they leave your machine.
           </div>
+
+          {data?.event && (
+            <div className="mt-6">
+              <EventPricingCard
+                eventId={eventId}
+                singlePence={data.event.price_single_pence ?? 500}
+                fivePence={data.event.price_five_pence ?? 2000}
+                galleryPence={data.event.price_gallery_pence ?? 5000}
+              />
+            </div>
+          )}
 
           {uploading && (
             <div className="mt-3">
