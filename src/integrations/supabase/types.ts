@@ -22,6 +22,7 @@ export type Database = {
           id: string
           name: string
           photographer_id: string
+          public_token: string
           status: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           id?: string
           name: string
           photographer_id: string
+          public_token?: string
           status?: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           id?: string
           name?: string
           photographer_id?: string
+          public_token?: string
           status?: string
         }
         Relationships: []
@@ -87,7 +90,7 @@ export type Database = {
           event_id: string
           id: string
           paid_at: string | null
-          person_id: string
+          person_id: string | null
           photo_ids: string[]
           receipt_email: string | null
           receipt_sent_at: string | null
@@ -100,7 +103,7 @@ export type Database = {
           event_id: string
           id?: string
           paid_at?: string | null
-          person_id: string
+          person_id?: string | null
           photo_ids?: string[]
           receipt_email?: string | null
           receipt_sent_at?: string | null
@@ -113,7 +116,7 @@ export type Database = {
           event_id?: string
           id?: string
           paid_at?: string | null
-          person_id?: string
+          person_id?: string | null
           photo_ids?: string[]
           receipt_email?: string | null
           receipt_sent_at?: string | null
