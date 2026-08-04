@@ -318,8 +318,11 @@ export const getGuestCheckoutStatus = createServerFn({ method: "POST" })
             .update({ status: "paid", paid_at: new Date().toISOString() })
             .eq("id", order.id)
             .eq("status", "pending");
+          const { sendOrderReceipt } = await import("./receipt.server");
+          await sendOrderReceipt(db, order.id, data.environment);
           return { ...details, status: "paid", message: "Payment received." };
         }
+
 
         if (session.status === "expired") {
           return {
