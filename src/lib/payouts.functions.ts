@@ -127,6 +127,7 @@ export interface PayoutRow {
 
 export const listPayouts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PayoutListResult> => {
     try {
       const { data, error } = await context.supabase
@@ -145,3 +146,4 @@ export const listPayouts = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
