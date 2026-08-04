@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatGBP } from "@/lib/pricing";
+import { ApplePayStatusCard } from "@/components/ApplePayStatusCard";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({
@@ -153,6 +154,12 @@ function Dashboard() {
                 Create event
               </button>
             </form>
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold">Payments</h2>
+              <div className="mt-3">
+                <ApplePayStatusCard />
+              </div>
+            </div>
           </section>
         </div>
       </div>
