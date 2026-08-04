@@ -239,10 +239,13 @@ export const settleGuestCheckout = createServerFn({ method: "POST" })
         .update({ status: "paid", paid_at: new Date().toISOString() })
         .eq("id", order.id)
         .eq("status", "pending");
+      const { sendOrderReceipt } = await import("./receipt.server");
+      await sendOrderReceipt(db, order.id, data.environment);
       return { paid: true };
     } catch {
       return { paid: false };
     }
+
   });
 
 export type GuestPaymentStatus = "paid" | "pending" | "failed" | "unknown";
