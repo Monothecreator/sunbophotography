@@ -25,6 +25,16 @@ function formatGbp(pence: number) {
   return `£${(pence / 100).toFixed(2)}`;
 }
 
+/** Escapes user-controlled text before it is interpolated into the email HTML. */
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function receiptHtml(input: {
   personName: string;
   eventName: string;
@@ -33,6 +43,10 @@ function receiptHtml(input: {
   downloadUrl: string;
 }) {
   const photos = `${input.photoCount} ${input.photoCount === 1 ? "photo" : "photos"}`;
+  const personName = escapeHtml(input.personName);
+  const eventName = escapeHtml(input.eventName);
+  const downloadUrl = escapeHtml(input.downloadUrl);
+
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:32px 16px;background:#faf7f3;font-family:Georgia,'Times New Roman',serif;color:#2f2822;">
