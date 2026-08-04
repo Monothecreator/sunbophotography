@@ -120,9 +120,12 @@ export async function verifyWebhook(
   );
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
-  if (!v1Signatures.includes(expected)) {
+  // Constant-time compare so a forged signature can't be probed byte by byte.
+  const matches = v1Signatures.some((candidate) => timingSafeEqualHex(candidate, expected));
+  if (!matches) {
     throw new Error("Invalid webhook signature");
   }
+
 
   return JSON.parse(body);
 }
