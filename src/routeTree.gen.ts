@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as GalleryTokenIndexRouteImport } from './routes/gallery.$token.index'
 import { Route as GalleryTokenDownloadsRouteImport } from './routes/gallery.$token.downloads'
+import { Route as GalleryTokenStatusRouteImport } from './routes/gallery.$token.status'
 import { Route as AuthenticatedDashboardEventsEventIdRouteImport } from './routes/_authenticated/dashboard.events.$eventId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -48,6 +49,11 @@ const GalleryTokenDownloadsRoute = GalleryTokenDownloadsRouteImport.update({
   path: '/gallery/$token/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GalleryTokenStatusRoute = GalleryTokenStatusRouteImport.update({
+  id: '/gallery/$token/status',
+  path: '/gallery/$token/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardEventsEventIdRoute =
   AuthenticatedDashboardEventsEventIdRouteImport.update({
     id: '/dashboard/events/$eventId',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
+  '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
+  '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token': typeof GalleryTokenIndexRoute
   '/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
+  '/gallery/$token/status': typeof GalleryTokenStatusRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/gallery/$token/': typeof GalleryTokenIndexRoute
   '/_authenticated/dashboard/events/$eventId': typeof AuthenticatedDashboardEventsEventIdRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/gallery/$token/downloads'
+    | '/gallery/$token/status'
     | '/dashboard/'
     | '/gallery/$token/'
     | '/dashboard/events/$eventId'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/gallery/$token/downloads'
+    | '/gallery/$token/status'
     | '/dashboard'
     | '/gallery/$token'
     | '/dashboard/events/$eventId'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/gallery/$token/downloads'
+    | '/gallery/$token/status'
     | '/_authenticated/dashboard/'
     | '/gallery/$token/'
     | '/_authenticated/dashboard/events/$eventId'
@@ -126,6 +138,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   GalleryTokenDownloadsRoute: typeof GalleryTokenDownloadsRoute
+  GalleryTokenStatusRoute: typeof GalleryTokenStatusRoute
   GalleryTokenIndexRoute: typeof GalleryTokenIndexRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GalleryTokenDownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gallery/$token/status': {
+      id: '/gallery/$token/status'
+      path: '/gallery/$token/status'
+      fullPath: '/gallery/$token/status'
+      preLoaderRoute: typeof GalleryTokenStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/events/$eventId': {
       id: '/_authenticated/dashboard/events/$eventId'
       path: '/dashboard/events/$eventId'
@@ -210,19 +230,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   GalleryTokenDownloadsRoute: GalleryTokenDownloadsRoute,
+  GalleryTokenStatusRoute: GalleryTokenStatusRoute,
   GalleryTokenIndexRoute: GalleryTokenIndexRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
