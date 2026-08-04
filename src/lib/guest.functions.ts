@@ -154,7 +154,7 @@ export const getGuestDownloads = createServerFn({ method: "POST" })
       (photos ?? []).map(async (p) => {
         const { data: signed } = await db.storage
           .from("originals")
-          .createSignedUrl(p.file_path, 60 * 5, { download: p.filename ?? undefined });
+          .createSignedUrl(p.file_path, 60 * 5, { download: p.filename ?? true });
         return { id: p.id, filename: p.filename ?? "photo.jpg", url: signed?.signedUrl ?? "" };
       }),
     );
