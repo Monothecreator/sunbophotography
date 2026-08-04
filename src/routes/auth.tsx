@@ -65,7 +65,23 @@ function AuthPage() {
       setMessage(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setBusy(false);
+  }
+
+  async function signInWithGoogle() {
+    setBusy(true);
+    setMessage(null);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setMessage(result.error.message ?? "Google sign-in failed");
+      setBusy(false);
+      return;
     }
+    if (result.redirected) return;
+    navigate({ to: "/dashboard", replace: true });
+  }
+
   }
 
   return (
