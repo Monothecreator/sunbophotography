@@ -128,25 +128,77 @@ function Dashboard() {
                   .reduce((s, o) => s + o.amount_pence - (o.refunded_pence ?? 0), 0);
                 const evViews = data.views.filter((v) => v.event_id === ev.id).length;
                 const evPeople = data.people.filter((p) => p.event_id === ev.id).length;
+                const hasOrders = data.orders.some((o) => o.event_id === ev.id);
+                if (editingEvent === ev.id) {
+                  return (
+                    <form
+                      key={ev.id}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        saveEventName(ev.id);
+                      }}
+                      className="surface flex flex-wrap items-center gap-2 p-4"
+                    >
+                      <input
+                        autoFocus
+                        value={eventDraft}
+                        onChange={(e) => setEventDraft(e.target.value)}
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                      <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingEvent(null)}
+                        className="rounded-md border border-border px-3 py-2 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  );
+                }
                 return (
-                  <Link
+                  <div
                     key={ev.id}
-                    to="/dashboard/events/$eventId"
-                    params={{ eventId: ev.id }}
-                    className="surface flex items-center justify-between p-4 transition-colors hover:bg-accent/40"
+                    className="surface flex items-center justify-between gap-3 p-4"
                   >
-                    <div>
+                    <Link
+                      to="/dashboard/events/$eventId"
+                      params={{ eventId: ev.id }}
+                      className="min-w-0 flex-1 transition-colors hover:opacity-80"
+                    >
                       <p className="font-medium">{ev.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {ev.date ?? "No date"} · {evPeople} people · {evViews} views
                       </p>
-                    </div>
+                    </Link>
                     <span className="font-display text-lg font-semibold">
                       {formatGBP(evRevenue)}
                     </span>
-                  </Link>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        aria-label={`Rename ${ev.name}`}
+                        onClick={() => {
+                          setEventDraft(ev.name);
+                          setEditingEvent(ev.id);
+                        }}
+                        className="rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        aria-label={`Delete ${ev.name}`}
+                        onClick={() => deleteEvent(ev.id, ev.name, hasOrders)}
+                        className="rounded-md border border-border px-2 py-1.5 text-xs text-destructive"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
+
             </div>
           </section>
 
