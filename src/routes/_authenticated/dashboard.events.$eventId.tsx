@@ -211,7 +211,45 @@ function EventWorkspace() {
         <section>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
+              {editingTitle ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveTitle();
+                  }}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <input
+                    autoFocus
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold"
+                  />
+                  <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTitle(false)}
+                    className="rounded-md border border-border px-3 py-2 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
+                  <button
+                    onClick={() => {
+                      setTitleDraft(data?.event?.name ?? "");
+                      setEditingTitle(true);
+                    }}
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Rename
+                  </button>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 {data?.event?.date ?? "No date"} · {photos.length} photos ·{" "}
                 {formatGBP(
