@@ -527,25 +527,36 @@ function EventWorkspace() {
                 const mine = selected && p.assigned_person_id === selected.id;
                 const owner = people.find((pp) => pp.id === p.assigned_person_id);
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    onClick={() => toggleAssign(p.id, p.assigned_person_id)}
                     className={`group relative overflow-hidden rounded-md border ${
                       mine ? "border-primary ring-2 ring-ring" : "border-border"
                     }`}
                   >
-                    <img
-                      src={p.url}
-                      alt="Event preview"
-                      loading="lazy"
-                      className="aspect-square w-full object-cover"
-                    />
+                    <button
+                      onClick={() => toggleAssign(p.id, p.assigned_person_id)}
+                      className="block w-full"
+                    >
+                      <img
+                        src={p.url}
+                        alt="Event preview"
+                        loading="lazy"
+                        className="aspect-square w-full object-cover"
+                      />
+                    </button>
                     {owner && (
                       <span className="absolute bottom-1 left-1 rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background">
                         {owner.name}
                       </span>
                     )}
-                  </button>
+                    <button
+                      aria-label="Delete photo"
+                      onClick={() => deletePhoto(p)}
+                      className="absolute top-1 right-1 rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 );
               })}
               {photos.length === 0 && (
