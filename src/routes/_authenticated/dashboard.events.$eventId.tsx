@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/events/$eventId"
 type PreviewPhoto = {
   id: string;
   preview_path: string;
+  file_path: string;
   assigned_person_id: string | null;
   url: string;
 };
@@ -35,6 +36,11 @@ function EventWorkspace() {
   const [activePerson, setActivePerson] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [albumQrDataUrl, setAlbumQrDataUrl] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [personDraft, setPersonDraft] = useState("");
+
 
   const { data } = useQuery({
     queryKey: ["event", eventId],
