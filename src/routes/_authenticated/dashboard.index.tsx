@@ -32,6 +32,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [editingEvent, setEditingEvent] = useState<string | null>(null);
+  const [eventDraft, setEventDraft] = useState("");
+
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
