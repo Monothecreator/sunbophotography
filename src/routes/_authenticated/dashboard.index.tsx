@@ -32,6 +32,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [editingEvent, setEditingEvent] = useState<string | null>(null);
+  const [eventDraft, setEventDraft] = useState("");
+
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
@@ -70,6 +73,48 @@ function Dashboard() {
     await qc.invalidateQueries({ queryKey: ["dashboard"] });
     if (created) navigate({ to: "/dashboard/events/$eventId", params: { eventId: created.id } });
   }
+
+  async function saveEventName(eventId: string) {
+    const next = eventDraft.trim();
+    if (!next) return;
+    await supabase.from("events").update({ name: next }).eq("id", eventId);
+    setEditingEvent(null);
+    await qc.invalidateQueries({ queryKey: ["dashboard"] });
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deleteEvent(eventId: string, eventName: string, hasOrders: boolean) {
+    if (hasOrders) {
+      window.alert(
+        `${eventName} has paid orders, so it can't be deleted — buyers would lose their downloads.`,
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        `Delete ${eventName}? All its photos, guests and gallery links will stop working.`,
+      )
+    )
+      return;
+
+    const { data: photos } = await supabase
+      .from("photos")
+      .select("preview_path, file_path")
+      .eq("event_id", eventId);
+
+    if (photos && photos.length > 0) {
+      await supabase.storage.from("previews").remove(photos.map((p) => p.preview_path));
+      await supabase.storage.from("originals").remove(photos.map((p) => p.file_path));
+    }
+    await supabase.from("photos").delete().eq("event_id", eventId);
+    await supabase.from("people").delete().eq("event_id", eventId);
+    const { error } = await supabase.from("events").delete().eq("id", eventId);
+    if (error) {
+      window.alert(`Could not delete ${eventName}: ${error.message}`);
+    }
+    await qc.invalidateQueries({ queryKey: ["dashboard"] });
+  }
+
 
   const revenue = (data?.orders ?? []).reduce(
     (s, o) => s + o.amount_pence - (o.refunded_pence ?? 0),
@@ -128,25 +173,77 @@ function Dashboard() {
                   .reduce((s, o) => s + o.amount_pence - (o.refunded_pence ?? 0), 0);
                 const evViews = data.views.filter((v) => v.event_id === ev.id).length;
                 const evPeople = data.people.filter((p) => p.event_id === ev.id).length;
+                const hasOrders = data.orders.some((o) => o.event_id === ev.id);
+                if (editingEvent === ev.id) {
+                  return (
+                    <form
+                      key={ev.id}
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        saveEventName(ev.id);
+                      }}
+                      className="surface flex flex-wrap items-center gap-2 p-4"
+                    >
+                      <input
+                        autoFocus
+                        value={eventDraft}
+                        onChange={(e) => setEventDraft(e.target.value)}
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                      <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingEvent(null)}
+                        className="rounded-md border border-border px-3 py-2 text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  );
+                }
                 return (
-                  <Link
+                  <div
                     key={ev.id}
-                    to="/dashboard/events/$eventId"
-                    params={{ eventId: ev.id }}
-                    className="surface flex items-center justify-between p-4 transition-colors hover:bg-accent/40"
+                    className="surface flex items-center justify-between gap-3 p-4"
                   >
-                    <div>
+                    <Link
+                      to="/dashboard/events/$eventId"
+                      params={{ eventId: ev.id }}
+                      className="min-w-0 flex-1 transition-colors hover:opacity-80"
+                    >
                       <p className="font-medium">{ev.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {ev.date ?? "No date"} · {evPeople} people · {evViews} views
                       </p>
-                    </div>
+                    </Link>
                     <span className="font-display text-lg font-semibold">
                       {formatGBP(evRevenue)}
                     </span>
-                  </Link>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        aria-label={`Rename ${ev.name}`}
+                        onClick={() => {
+                          setEventDraft(ev.name);
+                          setEditingEvent(ev.id);
+                        }}
+                        className="rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        aria-label={`Delete ${ev.name}`}
+                        onClick={() => deleteEvent(ev.id, ev.name, hasOrders)}
+                        className="rounded-md border border-border px-2 py-1.5 text-xs text-destructive"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
+
             </div>
           </section>
 
