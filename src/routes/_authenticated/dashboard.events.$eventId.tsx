@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/events/$eventId"
 type PreviewPhoto = {
   id: string;
   preview_path: string;
+  file_path: string;
   assigned_person_id: string | null;
   url: string;
 };
@@ -35,6 +36,11 @@ function EventWorkspace() {
   const [activePerson, setActivePerson] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [albumQrDataUrl, setAlbumQrDataUrl] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [personDraft, setPersonDraft] = useState("");
+
 
   const { data } = useQuery({
     queryKey: ["event", eventId],
@@ -54,6 +60,7 @@ function EventWorkspace() {
           return {
             id: p.id,
             preview_path: p.preview_path,
+            file_path: p.file_path,
             assigned_person_id: p.assigned_person_id,
             url: signed?.signedUrl ?? "",
           };
@@ -109,6 +116,41 @@ function EventWorkspace() {
     await supabase.from("photos").update({ assigned_person_id: next }).eq("id", photoId);
     await qc.invalidateQueries({ queryKey: ["event", eventId] });
   }
+
+  async function saveTitle() {
+    const name = titleDraft.trim();
+    if (!name) return;
+    await supabase.from("events").update({ name }).eq("id", eventId);
+    setEditingTitle(false);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+    await qc.invalidateQueries({ queryKey: ["events"] });
+  }
+
+  async function savePersonName(personId: string) {
+    const name = personDraft.trim();
+    if (!name) return;
+    await supabase.from("people").update({ name }).eq("id", personId);
+    setEditingPerson(null);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deletePerson(personId: string, name: string) {
+    if (!window.confirm(`Delete ${name}? Their gallery link will stop working.`)) return;
+    await supabase.from("photos").update({ assigned_person_id: null }).eq("assigned_person_id", personId);
+    await supabase.from("people").delete().eq("id", personId);
+    if (activePerson === personId) setActivePerson(null);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deletePhoto(photo: PreviewPhoto) {
+    if (!window.confirm("Delete this photo permanently?")) return;
+    await supabase.from("photos").delete().eq("id", photo.id);
+    await supabase.storage.from("previews").remove([photo.preview_path]);
+    await supabase.storage.from("originals").remove([photo.file_path]);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+
 
   const people = data?.people ?? [];
   const photos = data?.photos ?? [];
@@ -169,7 +211,45 @@ function EventWorkspace() {
         <section>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
+              {editingTitle ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveTitle();
+                  }}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <input
+                    autoFocus
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold"
+                  />
+                  <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTitle(false)}
+                    className="rounded-md border border-border px-3 py-2 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-semibold">{data?.event?.name}</h1>
+                  <button
+                    onClick={() => {
+                      setTitleDraft(data?.event?.name ?? "");
+                      setEditingTitle(true);
+                    }}
+                    className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Rename
+                  </button>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 {data?.event?.date ?? "No date"} · {photos.length} photos ·{" "}
                 {formatGBP(
@@ -304,21 +384,69 @@ function EventWorkspace() {
               {people.map((p) => {
                 const count = photos.filter((ph) => ph.assigned_person_id === p.id).length;
                 return (
-                  <li key={p.id}>
-                    <button
-                      onClick={() => {
-                        setActivePerson(p.id === activePerson ? null : p.id);
-                        setQrDataUrl(null);
-                      }}
-                      className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                        activePerson === p.id
-                          ? "border-primary bg-accent/50"
-                          : "border-border hover:bg-accent/30"
-                      }`}
-                    >
-                      <span className="font-medium">{p.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{count} photos</span>
-                    </button>
+                  <li key={p.id} className="flex items-center gap-2">
+                    {editingPerson === p.id ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          savePersonName(p.id);
+                        }}
+                        className="flex flex-1 gap-2"
+                      >
+                        <input
+                          autoFocus
+                          value={personDraft}
+                          onChange={(e) => setPersonDraft(e.target.value)}
+                          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+                        <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingPerson(null)}
+                          className="rounded-md border border-border px-3 py-2 text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setActivePerson(p.id === activePerson ? null : p.id);
+                            setQrDataUrl(null);
+                          }}
+                          className={`flex-1 rounded-md border px-3 py-2 text-left text-sm ${
+                            activePerson === p.id
+                              ? "border-primary bg-accent/50"
+                              : "border-border hover:bg-accent/30"
+                          }`}
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {count} photos
+                          </span>
+                        </button>
+                        <button
+                          aria-label={`Rename ${p.name}`}
+                          onClick={() => {
+                            setPersonDraft(p.name);
+                            setEditingPerson(p.id);
+                          }}
+                          className="rounded-md border border-border px-2 py-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          aria-label={`Delete ${p.name}`}
+                          onClick={() => deletePerson(p.id, p.name)}
+                          className="rounded-md border border-border px-2 py-2 text-xs text-destructive"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -399,25 +527,36 @@ function EventWorkspace() {
                 const mine = selected && p.assigned_person_id === selected.id;
                 const owner = people.find((pp) => pp.id === p.assigned_person_id);
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    onClick={() => toggleAssign(p.id, p.assigned_person_id)}
                     className={`group relative overflow-hidden rounded-md border ${
                       mine ? "border-primary ring-2 ring-ring" : "border-border"
                     }`}
                   >
-                    <img
-                      src={p.url}
-                      alt="Event preview"
-                      loading="lazy"
-                      className="aspect-square w-full object-cover"
-                    />
+                    <button
+                      onClick={() => toggleAssign(p.id, p.assigned_person_id)}
+                      className="block w-full"
+                    >
+                      <img
+                        src={p.url}
+                        alt="Event preview"
+                        loading="lazy"
+                        className="aspect-square w-full object-cover"
+                      />
+                    </button>
                     {owner && (
                       <span className="absolute bottom-1 left-1 rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background">
                         {owner.name}
                       </span>
                     )}
-                  </button>
+                    <button
+                      aria-label="Delete photo"
+                      onClick={() => deletePhoto(p)}
+                      className="absolute top-1 right-1 rounded bg-foreground/70 px-1.5 py-0.5 text-[10px] text-background opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 );
               })}
               {photos.length === 0 && (
