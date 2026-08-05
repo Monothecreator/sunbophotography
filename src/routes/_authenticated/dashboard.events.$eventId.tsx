@@ -60,6 +60,7 @@ function EventWorkspace() {
           return {
             id: p.id,
             preview_path: p.preview_path,
+            file_path: p.file_path,
             assigned_person_id: p.assigned_person_id,
             url: signed?.signedUrl ?? "",
           };
