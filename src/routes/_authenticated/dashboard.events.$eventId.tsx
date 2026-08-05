@@ -384,21 +384,69 @@ function EventWorkspace() {
               {people.map((p) => {
                 const count = photos.filter((ph) => ph.assigned_person_id === p.id).length;
                 return (
-                  <li key={p.id}>
-                    <button
-                      onClick={() => {
-                        setActivePerson(p.id === activePerson ? null : p.id);
-                        setQrDataUrl(null);
-                      }}
-                      className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                        activePerson === p.id
-                          ? "border-primary bg-accent/50"
-                          : "border-border hover:bg-accent/30"
-                      }`}
-                    >
-                      <span className="font-medium">{p.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{count} photos</span>
-                    </button>
+                  <li key={p.id} className="flex items-center gap-2">
+                    {editingPerson === p.id ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          savePersonName(p.id);
+                        }}
+                        className="flex flex-1 gap-2"
+                      >
+                        <input
+                          autoFocus
+                          value={personDraft}
+                          onChange={(e) => setPersonDraft(e.target.value)}
+                          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+                        <button className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingPerson(null)}
+                          className="rounded-md border border-border px-3 py-2 text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setActivePerson(p.id === activePerson ? null : p.id);
+                            setQrDataUrl(null);
+                          }}
+                          className={`flex-1 rounded-md border px-3 py-2 text-left text-sm ${
+                            activePerson === p.id
+                              ? "border-primary bg-accent/50"
+                              : "border-border hover:bg-accent/30"
+                          }`}
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {count} photos
+                          </span>
+                        </button>
+                        <button
+                          aria-label={`Rename ${p.name}`}
+                          onClick={() => {
+                            setPersonDraft(p.name);
+                            setEditingPerson(p.id);
+                          }}
+                          className="rounded-md border border-border px-2 py-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          aria-label={`Delete ${p.name}`}
+                          onClick={() => deletePerson(p.id, p.name)}
+                          className="rounded-md border border-border px-2 py-2 text-xs text-destructive"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </li>
                 );
               })}
