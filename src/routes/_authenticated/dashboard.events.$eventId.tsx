@@ -117,6 +117,41 @@ function EventWorkspace() {
     await qc.invalidateQueries({ queryKey: ["event", eventId] });
   }
 
+  async function saveTitle() {
+    const name = titleDraft.trim();
+    if (!name) return;
+    await supabase.from("events").update({ name }).eq("id", eventId);
+    setEditingTitle(false);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+    await qc.invalidateQueries({ queryKey: ["events"] });
+  }
+
+  async function savePersonName(personId: string) {
+    const name = personDraft.trim();
+    if (!name) return;
+    await supabase.from("people").update({ name }).eq("id", personId);
+    setEditingPerson(null);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deletePerson(personId: string, name: string) {
+    if (!window.confirm(`Delete ${name}? Their gallery link will stop working.`)) return;
+    await supabase.from("photos").update({ assigned_person_id: null }).eq("assigned_person_id", personId);
+    await supabase.from("people").delete().eq("id", personId);
+    if (activePerson === personId) setActivePerson(null);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deletePhoto(photo: PreviewPhoto) {
+    if (!window.confirm("Delete this photo permanently?")) return;
+    await supabase.from("photos").delete().eq("id", photo.id);
+    await supabase.storage.from("previews").remove([photo.preview_path]);
+    await supabase.storage.from("originals").remove([photo.file_path]);
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+
+
   const people = data?.people ?? [];
   const photos = data?.photos ?? [];
   const selected = people.find((p) => p.id === activePerson);
