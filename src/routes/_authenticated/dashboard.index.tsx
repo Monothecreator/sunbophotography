@@ -74,6 +74,48 @@ function Dashboard() {
     if (created) navigate({ to: "/dashboard/events/$eventId", params: { eventId: created.id } });
   }
 
+  async function saveEventName(eventId: string) {
+    const next = eventDraft.trim();
+    if (!next) return;
+    await supabase.from("events").update({ name: next }).eq("id", eventId);
+    setEditingEvent(null);
+    await qc.invalidateQueries({ queryKey: ["dashboard"] });
+    await qc.invalidateQueries({ queryKey: ["event", eventId] });
+  }
+
+  async function deleteEvent(eventId: string, eventName: string, hasOrders: boolean) {
+    if (hasOrders) {
+      window.alert(
+        `${eventName} has paid orders, so it can't be deleted — buyers would lose their downloads.`,
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        `Delete ${eventName}? All its photos, guests and gallery links will stop working.`,
+      )
+    )
+      return;
+
+    const { data: photos } = await supabase
+      .from("photos")
+      .select("preview_path, file_path")
+      .eq("event_id", eventId);
+
+    if (photos && photos.length > 0) {
+      await supabase.storage.from("previews").remove(photos.map((p) => p.preview_path));
+      await supabase.storage.from("originals").remove(photos.map((p) => p.file_path));
+    }
+    await supabase.from("photos").delete().eq("event_id", eventId);
+    await supabase.from("people").delete().eq("event_id", eventId);
+    const { error } = await supabase.from("events").delete().eq("id", eventId);
+    if (error) {
+      window.alert(`Could not delete ${eventName}: ${error.message}`);
+    }
+    await qc.invalidateQueries({ queryKey: ["dashboard"] });
+  }
+
+
   const revenue = (data?.orders ?? []).reduce(
     (s, o) => s + o.amount_pence - (o.refunded_pence ?? 0),
     0,
