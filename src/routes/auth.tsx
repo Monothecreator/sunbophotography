@@ -42,6 +42,10 @@ function AuthPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/dashboard", replace: true });
     });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) navigate({ to: "/dashboard", replace: true });
+    });
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   async function sendReset() {
@@ -95,17 +99,30 @@ function AuthPage() {
   async function signInWithGoogle() {
     setBusy(true);
     setMessage(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setMessage(result.error.message ?? "Google sign-in failed");
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth`,
+      });
+      if (result.error) {
+        setMessage(result.error.message ?? "Google sign-in failed");
+        setBusy(false);
+        return;
+      }
+      if (result.redirected) return;
+      // Session is set by the helper — wait for it before leaving the page.
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setMessage("Google sign-in did not complete. Please try again.");
+        setBusy(false);
+        return;
+      }
+      navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
-      return;
     }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard", replace: true });
   }
+
 
 
   return (
