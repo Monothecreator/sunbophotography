@@ -7,7 +7,7 @@ import { getGuestGallery, startGuestCheckout } from "@/lib/guest.functions";
 import { formatGBP, priceForSelection } from "@/lib/pricing";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { ProtectedImage, useScreenshotGuard } from "@/components/ProtectedImage";
+import { PersonalizedPreview, usePreviewGuard } from "@/components/PersonalizedPreview";
 
 export const Route = createFileRoute("/gallery/$token/")({
   head: () => ({
@@ -38,7 +38,7 @@ function GuestGallery() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const guarded = useScreenshotGuard();
+  const { guarded, notice } = usePreviewGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
@@ -83,6 +83,7 @@ function GuestGallery() {
   }
 
   const total = priceForSelection(selected.size, data.photos.length, data.tiers);
+  const watermarkLabel = `${data.personName} · ${token.slice(0, 6)}`;
 
   if (checkoutIds) {
     return (
@@ -107,7 +108,7 @@ function GuestGallery() {
   }
 
   return (
-    <main className="min-h-screen bg-background pb-32">
+    <main className="min-h-screen bg-background pb-32 select-none">
       <div className="mx-auto max-w-5xl px-5 pt-14">
         <p className="text-xs font-semibold tracking-[0.25em] text-muted-foreground uppercase">
           {data.eventName}
@@ -148,9 +149,10 @@ function GuestGallery() {
                     isOn ? "border-primary ring-2 ring-ring" : "border-border"
                   }`}
                 >
-                  <ProtectedImage
+                  <PersonalizedPreview
                     src={photo.previewUrl}
-                    alt={`Preview of ${data.personName}`}
+                    alt={`Watermarked preview of ${data.personName}`}
+                    label={watermarkLabel}
                     guarded={guarded}
                     className="aspect-[4/5] w-full object-cover"
                   />
@@ -171,7 +173,21 @@ function GuestGallery() {
             Your photographer hasn&rsquo;t added your photos yet — check back shortly.
           </p>
         )}
+
+        <p className="mt-8 text-xs text-muted-foreground">
+          Previews are personalised and watermarked with your name, and shown at reduced quality.
+          Full-resolution, watermark-free downloads unlock after purchase.
+        </p>
       </div>
+
+      {notice && (
+        <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-foreground/80 p-6 text-center">
+          <p className="max-w-sm text-sm font-medium text-background">
+            This preview is watermarked and personalised to you. Full quality unlocks after
+            purchase.
+          </p>
+        </div>
+      )}
 
       {data.photos.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 border-t border-border bg-card/95 backdrop-blur">
@@ -214,11 +230,12 @@ function GuestGallery() {
           onClick={() => setLightbox(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-6"
         >
-          <ProtectedImage
+          <PersonalizedPreview
             src={lightbox}
-            alt="Full preview"
+            alt="Watermarked preview"
+            label={watermarkLabel}
             guarded={guarded}
-            loading="eager"
+            eager
             className="max-h-[85vh] max-w-full rounded-md"
           />
         </button>
