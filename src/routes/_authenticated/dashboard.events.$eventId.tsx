@@ -10,9 +10,9 @@ import { EventPricingCard } from "@/components/EventPricingCard";
 export const Route = createFileRoute("/_authenticated/dashboard/events/$eventId")({
   head: () => ({
     meta: [
-      { title: "Event workspace — Aperture&Ember" },
+      { title: "Event workspace — SunboMedia" },
       { name: "description", content: "Upload photos, match guests and share QR galleries." },
-      { property: "og:title", content: "Event workspace — Aperture&Ember" },
+      { property: "og:title", content: "Event workspace — SunboMedia" },
       { property: "og:description", content: "Upload photos and share guest galleries." },
       { name: "robots", content: "noindex" },
     ],

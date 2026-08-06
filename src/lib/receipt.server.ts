@@ -53,7 +53,7 @@ function receiptHtml(input: {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr><td align="center">
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:14px;padding:36px;">
-          <tr><td style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#a8763e;">Aperture&amp;Ember</td></tr>
+          <tr><td style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#a8763e;">SunboMedia</td></tr>
           <tr><td style="padding-top:18px;font-size:24px;">Thank you, ${personName}.</td></tr>
           <tr><td style="padding-top:12px;font-size:16px;line-height:1.6;color:#5b5048;">
             Your ${photos} from <strong>${eventName}</strong> are ready to download — full resolution, no watermark.

@@ -12,13 +12,13 @@ import { PersonalizedPreview, usePreviewGuard } from "@/components/PersonalizedP
 export const Route = createFileRoute("/gallery/$token/")({
   head: () => ({
     meta: [
-      { title: "Your Photo Gallery — Aperture&Ember" },
+      { title: "Your Photo Gallery — SunboMedia" },
       {
         name: "description",
         content:
-          "Access your private event photo gallery from Aperture&Ember to preview your watermarked photos and purchase full-resolution downloads.",
+          "Access your private event photo gallery from SunboMedia to preview your watermarked photos and purchase full-resolution downloads.",
       },
-      { property: "og:title", content: "Your Photo Gallery — Aperture&Ember" },
+      { property: "og:title", content: "Your Photo Gallery — SunboMedia" },
       {
         property: "og:description",
         content:

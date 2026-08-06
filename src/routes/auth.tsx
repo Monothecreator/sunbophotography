@@ -7,13 +7,13 @@ import { lovable } from "@/integrations/lovable/index";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Photographer sign in — Aperture&Ember" },
+      { title: "Photographer sign in — SunboMedia" },
       {
         name: "description",
-        content: "Sign in or create your Aperture&Ember photographer account to manage events.",
+        content: "Sign in or create your SunboMedia photographer account to manage events.",
       },
-      { property: "og:title", content: "Photographer sign in — Aperture&Ember" },
-      { property: "og:description", content: "Access your Aperture&Ember studio dashboard." },
+      { property: "og:title", content: "Photographer sign in — SunboMedia" },
+      { property: "og:description", content: "Access your SunboMedia studio dashboard." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -96,7 +96,41 @@ function AuthPage() {
     }
   }
 
+  // Google and email/password resolve to the SAME account when the email
+  // matches (Supabase links the identities), so the profile row may already
+  // exist. Fill only what's missing — never overwrite the studio's details.
+  async function ensureProfile() {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id, name, business_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    const metaName =
+      (user.user_metadata?.["name"] as string | undefined) ??
+      (user.user_metadata?.["full_name"] as string | undefined) ??
+      null;
+    if (!existing) {
+      await supabase.from("profiles").insert({
+        id: user.id,
+        email: user.email ?? null,
+        name: metaName,
+        business_name: (user.user_metadata?.["business_name"] as string | undefined) ?? null,
+      });
+      return;
+    }
+    const patch: { name?: string; email?: string } = {};
+    if (!existing.name && metaName) patch.name = metaName;
+    if (!existing.email && user.email) patch.email = user.email;
+    if (Object.keys(patch).length) {
+      await supabase.from("profiles").update(patch).eq("id", user.id);
+    }
+  }
+
   async function signInWithGoogle() {
+
     setBusy(true);
     setMessage(null);
     try {
@@ -116,6 +150,7 @@ function AuthPage() {
         setBusy(false);
         return;
       }
+      await ensureProfile();
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
@@ -125,11 +160,12 @@ function AuthPage() {
 
 
 
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-semibold">
-          Aperture&amp;Ember — Photographer Sign In
+          SunboMedia — Photographer Sign In
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "login" ? "Sign in to your studio." : "Create your studio account."}

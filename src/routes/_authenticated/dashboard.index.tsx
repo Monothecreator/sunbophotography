@@ -17,9 +17,9 @@ import { useServerFn } from "@tanstack/react-start";
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   head: () => ({
     meta: [
-      { title: "Studio dashboard — Aperture&Ember" },
+      { title: "Studio dashboard — SunboMedia" },
       { name: "description", content: "Revenue, events and guest galleries for your studio." },
-      { property: "og:title", content: "Studio dashboard — Aperture&Ember" },
+      { property: "og:title", content: "Studio dashboard — SunboMedia" },
       { property: "og:description", content: "Revenue, events and guest galleries." },
       { name: "robots", content: "noindex" },
     ],
@@ -127,7 +127,7 @@ function Dashboard() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="font-display text-base font-semibold">Aperture&amp;Ember Studio</span>
+          <span className="font-display text-base font-semibold">SunboMedia</span>
           <div className="flex items-center gap-4">
           <Link to="/dashboard/account" className="text-sm text-muted-foreground hover:text-foreground">
             Account

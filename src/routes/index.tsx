@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Aperture&Ember — Deliver event photos to the people in them" },
+      { title: "SunboMedia — Deliver event photos to the people in them" },
       {
         name: "description",
         content:
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "Aperture&Ember — Deliver event photos to the people in them",
+        content: "SunboMedia — Deliver event photos to the people in them",
       },
       {
         property: "og:description",
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
-          name: "Aperture&Ember",
+          name: "SunboMedia",
           url: "/",
           description: "Event photo delivery for photographers and their guests.",
         }),
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "Aperture&Ember",
+          name: "SunboMedia",
           url: "/",
         }),
       },
@@ -49,7 +49,7 @@ function Landing() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-        <span className="font-display text-lg font-semibold tracking-tight">Aperture&amp;Ember</span>
+        <span className="font-display text-lg font-semibold tracking-tight">SunboMedia</span>
         <Link
           to="/auth"
           className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
