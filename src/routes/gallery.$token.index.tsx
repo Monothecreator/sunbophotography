@@ -7,6 +7,7 @@ import { getGuestGallery, startGuestCheckout } from "@/lib/guest.functions";
 import { formatGBP, priceForSelection } from "@/lib/pricing";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { ProtectedImage, useScreenshotGuard } from "@/components/ProtectedImage";
 
 export const Route = createFileRoute("/gallery/$token/")({
   head: () => ({
@@ -37,6 +38,7 @@ function GuestGallery() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const guarded = useScreenshotGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
@@ -212,7 +214,13 @@ function GuestGallery() {
           onClick={() => setLightbox(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-6"
         >
-          <img src={lightbox} alt="Full preview" className="max-h-full max-w-full rounded-md" />
+          <ProtectedImage
+            src={lightbox}
+            alt="Full preview"
+            guarded={guarded}
+            loading="eager"
+            className="max-h-[85vh] max-w-full rounded-md"
+          />
         </button>
       )}
     </main>
