@@ -125,10 +125,10 @@ function SharedAlbum() {
                     isOn ? "border-primary ring-2 ring-ring" : "border-border"
                   }`}
                 >
-                  <img
+                  <ProtectedImage
                     src={photo.previewUrl}
                     alt={`Preview from ${data.eventName}`}
-                    loading="lazy"
+                    guarded={guarded}
                     className="aspect-[4/5] w-full object-cover"
                   />
                 </button>
