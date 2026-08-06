@@ -7,6 +7,7 @@ import { getSharedAlbum, startAlbumCheckout } from "@/lib/album.functions";
 import { formatGBP, priceForSelection } from "@/lib/pricing";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { ProtectedImage, useScreenshotGuard } from "@/components/ProtectedImage";
 
 export const Route = createFileRoute("/album/$token/")({
   head: () => ({
@@ -31,6 +32,7 @@ function SharedAlbum() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const guarded = useScreenshotGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [checkoutIds, setCheckoutIds] = useState<string[] | null>(null);
@@ -125,10 +127,10 @@ function SharedAlbum() {
                     isOn ? "border-primary ring-2 ring-ring" : "border-border"
                   }`}
                 >
-                  <img
+                  <ProtectedImage
                     src={photo.previewUrl}
                     alt={`Preview from ${data.eventName}`}
-                    loading="lazy"
+                    guarded={guarded}
                     className="aspect-[4/5] w-full object-cover"
                   />
                 </button>
@@ -192,7 +194,13 @@ function SharedAlbum() {
           onClick={() => setLightbox(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-6"
         >
-          <img src={lightbox} alt="Full preview" className="max-h-full max-w-full rounded-md" />
+          <ProtectedImage
+            src={lightbox}
+            alt="Full preview"
+            guarded={guarded}
+            loading="eager"
+            className="max-h-[85vh] max-w-full rounded-md"
+          />
         </button>
       )}
     </main>
