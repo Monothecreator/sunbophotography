@@ -116,12 +116,14 @@ function AuthPage() {
         setBusy(false);
         return;
       }
+      await ensureProfile();
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
     }
   }
+
 
 
 
