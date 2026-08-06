@@ -182,20 +182,6 @@ function SharedAlbum() {
         </div>
       )}
 
-      {lightbox && (
-        <button
-          onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-6"
-        >
-          <ProtectedImage
-            src={lightbox}
-            alt="Full preview"
-            guarded={guarded}
-            loading="eager"
-            className="max-h-[85vh] max-w-full rounded-md"
-          />
-        </button>
-      )}
     </main>
   );
 }
