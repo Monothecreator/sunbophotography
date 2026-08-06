@@ -121,18 +121,27 @@ export const createPayout = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutResult> => {
     try {
+      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      if (ledger.entitledPence <= 0) {
+        return { error: "You have no withdrawable earnings yet." };
+      }
+
       const stripe = createStripeClient(data.environment);
       const balance = await stripe.balance.retrieve();
-      const available = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+      const platformAvailable = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+
+      // Cap strictly to this photographer's own accrued, not-yet-withdrawn revenue.
+      const available = Math.min(ledger.entitledPence, Math.max(0, platformAvailable));
 
       if (available <= 0) {
-        return { error: "No available balance to withdraw." };
+        return { error: "Your earnings are not yet settled in Stripe. Try again later." };
       }
 
       const amountPence = data.amountPence ? Math.min(data.amountPence, available) : available;
       if (amountPence <= 0) {
         return { error: "Withdrawal amount must be greater than zero." };
       }
+
 
       const payout = await stripe.payouts.create({
         amount: amountPence,
