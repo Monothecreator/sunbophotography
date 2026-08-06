@@ -156,12 +156,6 @@ function GuestGallery() {
                     className="aspect-[4/5] w-full object-cover"
                   />
                 </button>
-                <button
-                  onClick={() => setLightbox(photo.previewUrl)}
-                  className="absolute right-2 bottom-2 rounded bg-foreground/70 px-2 py-1 text-[11px] text-background"
-                >
-                  View
-                </button>
               </div>
             );
           })}
