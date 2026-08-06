@@ -121,9 +121,9 @@ function AuthPage() {
       });
       return;
     }
-    const patch: Record<string, string> = {};
-    if (!existing.name && metaName) patch["name"] = metaName;
-    if (!existing.email && user.email) patch["email"] = user.email;
+    const patch: { name?: string; email?: string } = {};
+    if (!existing.name && metaName) patch.name = metaName;
+    if (!existing.email && user.email) patch.email = user.email;
     if (Object.keys(patch).length) {
       await supabase.from("profiles").update(patch).eq("id", user.id);
     }
