@@ -96,7 +96,41 @@ function AuthPage() {
     }
   }
 
+  // Google and email/password resolve to the SAME account when the email
+  // matches (Supabase links the identities), so the profile row may already
+  // exist. Fill only what's missing — never overwrite the studio's details.
+  async function ensureProfile() {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (!user) return;
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id, name, business_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    const metaName =
+      (user.user_metadata?.["name"] as string | undefined) ??
+      (user.user_metadata?.["full_name"] as string | undefined) ??
+      null;
+    if (!existing) {
+      await supabase.from("profiles").insert({
+        id: user.id,
+        email: user.email ?? null,
+        name: metaName,
+        business_name: (user.user_metadata?.["business_name"] as string | undefined) ?? null,
+      });
+      return;
+    }
+    const patch: Record<string, string> = {};
+    if (!existing.name && metaName) patch["name"] = metaName;
+    if (!existing.email && user.email) patch["email"] = user.email;
+    if (Object.keys(patch).length) {
+      await supabase.from("profiles").update(patch).eq("id", user.id);
+    }
+  }
+
   async function signInWithGoogle() {
+
     setBusy(true);
     setMessage(null);
     try {
