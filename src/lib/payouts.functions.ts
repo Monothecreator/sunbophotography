@@ -1,11 +1,62 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const CURRENCY = "gbp";
 
 function toPence(amount: number): number {
   return Math.round(amount);
+}
+
+/**
+ * The platform uses a single shared Stripe balance, so a payout must never be
+ * allowed to exceed the calling photographer's own accrued, unpaid revenue.
+ * This computes that ledger from the caller's own events/orders (RLS-scoped)
+ * minus everything they have already withdrawn.
+ */
+async function getPhotographerLedger(
+  supabase: SupabaseClient<any, any, any>,
+  userId: string,
+): Promise<{ earnedPence: number; withdrawnPence: number; entitledPence: number }> {
+  const { data: events, error: eventsError } = await supabase
+    .from("events")
+    .select("id")
+    .eq("photographer_id", userId);
+  if (eventsError) throw new Error("Could not load your events.");
+
+  const eventIds = (events ?? []).map((e: { id: string }) => e.id);
+
+  let earnedPence = 0;
+  if (eventIds.length > 0) {
+    const { data: orders, error: ordersError } = await supabase
+      .from("orders")
+      .select("amount_pence, refunded_pence, status")
+      .in("event_id", eventIds)
+      .eq("status", "paid");
+    if (ordersError) throw new Error("Could not load your sales.");
+    earnedPence = (orders ?? []).reduce(
+      (sum: number, o: { amount_pence: number | null; refunded_pence: number | null }) =>
+        sum + (o.amount_pence ?? 0) - (o.refunded_pence ?? 0),
+      0,
+    );
+  }
+
+  const { data: payouts, error: payoutsError } = await supabase
+    .from("payouts")
+    .select("amount_pence, status")
+    .eq("user_id", userId);
+  if (payoutsError) throw new Error("Could not load your withdrawals.");
+
+  const withdrawnPence = (payouts ?? [])
+    .filter((p: { status: string | null }) => p.status !== "failed" && p.status !== "canceled")
+    .reduce((sum: number, p: { amount_pence: number | null }) => sum + (p.amount_pence ?? 0), 0);
+
+  return {
+    earnedPence,
+    withdrawnPence,
+    entitledPence: Math.max(0, earnedPence - withdrawnPence),
+  };
 }
 
 export type PayoutBalanceResult =
@@ -25,15 +76,21 @@ export const getPayoutBalance = createServerFn({ method: "POST" })
     }
     return data;
   })
-  .handler(async ({ data }): Promise<PayoutBalanceResult> => {
+  .handler(async ({ data, context }): Promise<PayoutBalanceResult> => {
     try {
+      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+
       const stripe = createStripeClient(data.environment);
       const balance = await stripe.balance.retrieve();
 
-      const available = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
-      const pending = balance.pending?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
-      const instantAvailable =
+      const platformAvailable = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+      const platformInstant =
         balance.instant_available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+
+      // Never report the pooled platform balance — only this photographer's share.
+      const available = Math.min(ledger.entitledPence, Math.max(0, platformAvailable));
+      const instantAvailable = Math.min(available, Math.max(0, platformInstant));
+      const pending = Math.max(0, ledger.entitledPence - available);
 
       return {
         availablePence: toPence(available),
@@ -45,6 +102,7 @@ export const getPayoutBalance = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
 
 export type PayoutResult =
   | { success: true; payoutId: string; stripePayoutId: string; amountPence: number; status: string }
@@ -63,18 +121,27 @@ export const createPayout = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutResult> => {
     try {
+      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      if (ledger.entitledPence <= 0) {
+        return { error: "You have no withdrawable earnings yet." };
+      }
+
       const stripe = createStripeClient(data.environment);
       const balance = await stripe.balance.retrieve();
-      const available = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+      const platformAvailable = balance.available?.find((b) => b.currency === CURRENCY)?.amount ?? 0;
+
+      // Cap strictly to this photographer's own accrued, not-yet-withdrawn revenue.
+      const available = Math.min(ledger.entitledPence, Math.max(0, platformAvailable));
 
       if (available <= 0) {
-        return { error: "No available balance to withdraw." };
+        return { error: "Your earnings are not yet settled in Stripe. Try again later." };
       }
 
       const amountPence = data.amountPence ? Math.min(data.amountPence, available) : available;
       if (amountPence <= 0) {
         return { error: "Withdrawal amount must be greater than zero." };
       }
+
 
       const payout = await stripe.payouts.create({
         amount: amountPence,
