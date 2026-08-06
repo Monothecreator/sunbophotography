@@ -37,7 +37,6 @@ function GuestGallery() {
   const checkout = useServerFn(startGuestCheckout);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [lightbox, setLightbox] = useState<string | null>(null);
   const { guarded, notice } = usePreviewGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -157,12 +156,6 @@ function GuestGallery() {
                     className="aspect-[4/5] w-full object-cover"
                   />
                 </button>
-                <button
-                  onClick={() => setLightbox(photo.previewUrl)}
-                  className="absolute right-2 bottom-2 rounded bg-foreground/70 px-2 py-1 text-[11px] text-background"
-                >
-                  View
-                </button>
               </div>
             );
           })}
@@ -225,21 +218,6 @@ function GuestGallery() {
         </div>
       )}
 
-      {lightbox && (
-        <button
-          onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-6"
-        >
-          <PersonalizedPreview
-            src={lightbox}
-            alt="Watermarked preview"
-            label={watermarkLabel}
-            guarded={guarded}
-            eager
-            className="max-h-[85vh] max-w-full rounded-md"
-          />
-        </button>
-      )}
     </main>
   );
 }
