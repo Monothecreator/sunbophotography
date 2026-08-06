@@ -37,7 +37,6 @@ function GuestGallery() {
   const checkout = useServerFn(startGuestCheckout);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [lightbox, setLightbox] = useState<string | null>(null);
   const { guarded, notice } = usePreviewGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);

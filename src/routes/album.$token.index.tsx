@@ -31,7 +31,6 @@ function SharedAlbum() {
   const checkout = useServerFn(startAlbumCheckout);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [lightbox, setLightbox] = useState<string | null>(null);
   const guarded = useScreenshotGuard();
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
