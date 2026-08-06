@@ -7,13 +7,13 @@ import { lovable } from "@/integrations/lovable/index";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Photographer sign in — Aperture&Ember" },
+      { title: "Photographer sign in — SunboMedia" },
       {
         name: "description",
-        content: "Sign in or create your Aperture&Ember photographer account to manage events.",
+        content: "Sign in or create your SunboMedia photographer account to manage events.",
       },
-      { property: "og:title", content: "Photographer sign in — Aperture&Ember" },
-      { property: "og:description", content: "Access your Aperture&Ember studio dashboard." },
+      { property: "og:title", content: "Photographer sign in — SunboMedia" },
+      { property: "og:description", content: "Access your SunboMedia studio dashboard." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -129,7 +129,7 @@ function AuthPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-semibold">
-          Aperture&amp;Ember — Photographer Sign In
+          SunboMedia — Photographer Sign In
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "login" ? "Sign in to your studio." : "Create your studio account."}

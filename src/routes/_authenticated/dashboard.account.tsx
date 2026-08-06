@@ -5,12 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/dashboard/account")({
   head: () => ({
     meta: [
-      { title: "Account settings — Aperture&Ember" },
+      { title: "Account settings — SunboMedia" },
       {
         name: "description",
-        content: "Update your studio profile details and change your Aperture&Ember password.",
+        content: "Update your studio profile details and change your SunboMedia password.",
       },
-      { property: "og:title", content: "Account settings — Aperture&Ember" },
+      { property: "og:title", content: "Account settings — SunboMedia" },
       { property: "og:description", content: "Manage your studio profile and password." },
       { name: "robots", content: "noindex" },
     ],

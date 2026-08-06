@@ -50,9 +50,9 @@ export async function makeWatermarkedPreview(
   ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
   ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.fillText(businessName || "Aperture&Ember", w - markSize + 1, h - markSize + 1);
+  ctx.fillText(businessName || "SunboMedia", w - markSize + 1, h - markSize + 1);
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText(businessName || "Aperture&Ember", w - markSize, h - markSize);
+  ctx.fillText(businessName || "SunboMedia", w - markSize, h - markSize);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(

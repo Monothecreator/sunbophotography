@@ -10,13 +10,13 @@ export const Route = createFileRoute("/album/$token/downloads")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Your Downloads — Aperture&Ember" },
+      { title: "Your Downloads — SunboMedia" },
       {
         name: "description",
         content:
-          "Download the full-resolution, watermark-free photos you purchased from this Aperture&Ember event album.",
+          "Download the full-resolution, watermark-free photos you purchased from this SunboMedia event album.",
       },
-      { property: "og:title", content: "Your Downloads — Aperture&Ember" },
+      { property: "og:title", content: "Your Downloads — SunboMedia" },
       {
         property: "og:description",
         content: "Download the full-resolution photos you purchased.",

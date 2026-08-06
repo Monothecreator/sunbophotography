@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Aperture&Ember — Event photo delivery" },
+      { title: "SunboMedia — Event photo delivery" },
       {
         name: "description",
         content:
-          "Aperture&Ember delivers event photos: photographers upload and match photos to guests, guests unlock their own gallery by QR code.",
+          "SunboMedia delivers event photos: photographers upload and match photos to guests, guests unlock their own gallery by QR code.",
       },
-      { property: "og:title", content: "Aperture&Ember — Event photo delivery" },
+      { property: "og:title", content: "SunboMedia — Event photo delivery" },
       {
         property: "og:description",
         content: "Match photos to the people in them and deliver them beautifully.",
