@@ -15,6 +15,8 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardAccountRouteImport } from './routes/_authenticated/dashboard.account'
+import { Route as AuthenticatedDashboardTeamRouteImport } from './routes/_authenticated/dashboard.team'
+import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AlbumTokenIndexRouteImport } from './routes/album.$token.index'
 import { Route as AlbumTokenDownloadsRouteImport } from './routes/album.$token.downloads'
 import { Route as AlbumTokenStatusRouteImport } from './routes/album.$token.status'
@@ -53,6 +55,18 @@ const AuthenticatedDashboardAccountRoute =
   AuthenticatedDashboardAccountRouteImport.update({
     id: '/dashboard/account',
     path: '/dashboard/account',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardTeamRoute =
+  AuthenticatedDashboardTeamRouteImport.update({
+    id: '/dashboard/team',
+    path: '/dashboard/team',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInviteTokenRoute =
+  AuthenticatedInviteTokenRouteImport.update({
+    id: '/invite/$token',
+    path: '/invite/$token',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AlbumTokenIndexRoute = AlbumTokenIndexRouteImport.update({
@@ -103,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
+  '/dashboard/team': typeof AuthenticatedDashboardTeamRoute
+  '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -118,6 +134,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
+  '/dashboard/team': typeof AuthenticatedDashboardTeamRoute
+  '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -135,6 +153,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/dashboard/account': typeof AuthenticatedDashboardAccountRoute
+  '/_authenticated/dashboard/team': typeof AuthenticatedDashboardTeamRoute
+  '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
   '/album/$token/status': typeof AlbumTokenStatusRoute
   '/gallery/$token/downloads': typeof GalleryTokenDownloadsRoute
@@ -152,6 +172,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/sitemap.xml'
     | '/dashboard/account'
+    | '/dashboard/team'
+    | '/invite/$token'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -167,6 +189,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/sitemap.xml'
     | '/dashboard/account'
+    | '/dashboard/team'
+    | '/invite/$token'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -183,6 +207,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/sitemap.xml'
     | '/_authenticated/dashboard/account'
+    | '/_authenticated/dashboard/team'
+    | '/_authenticated/invite/$token'
     | '/album/$token/downloads'
     | '/album/$token/status'
     | '/gallery/$token/downloads'
@@ -252,6 +278,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAccountRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard/team': {
+      id: '/_authenticated/dashboard/team'
+      path: '/dashboard/team'
+      fullPath: '/dashboard/team'
+      preLoaderRoute: typeof AuthenticatedDashboardTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/invite/$token': {
+      id: '/_authenticated/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof AuthenticatedInviteTokenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/album/$token/': {
       id: '/album/$token/'
       path: '/album/$token'
@@ -313,12 +353,16 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardAccountRoute: typeof AuthenticatedDashboardAccountRoute
+  AuthenticatedDashboardTeamRoute: typeof AuthenticatedDashboardTeamRoute
+  AuthenticatedInviteTokenRoute: typeof AuthenticatedInviteTokenRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardEventsEventIdRoute: typeof AuthenticatedDashboardEventsEventIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardAccountRoute: AuthenticatedDashboardAccountRoute,
+  AuthenticatedDashboardTeamRoute: AuthenticatedDashboardTeamRoute,
+  AuthenticatedInviteTokenRoute: AuthenticatedInviteTokenRoute,
   AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   AuthenticatedDashboardEventsEventIdRoute:
     AuthenticatedDashboardEventsEventIdRoute,
@@ -343,13 +387,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -10,19 +10,38 @@ function toPence(amount: number): number {
 }
 
 /**
- * The platform uses a single shared Stripe balance, so a payout must never be
- * allowed to exceed the calling photographer's own accrued, unpaid revenue.
- * This computes that ledger from the caller's own events/orders (RLS-scoped)
- * minus everything they have already withdrawn.
+ * Only a studio OWNER may see or move money. Returns the studio the caller owns.
  */
-async function getPhotographerLedger(
+async function requireOwnedStudio(
   supabase: SupabaseClient<any, any, any>,
   userId: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("studio_members")
+    .select("studio_id, role")
+    .eq("user_id", userId)
+    .eq("role", "owner")
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error("Could not verify your studio.");
+  if (!data) throw new Error("Only the studio owner can manage earnings.");
+  return data.studio_id as string;
+}
+
+/**
+ * The platform uses a single shared Stripe balance, so a payout must never be
+ * allowed to exceed the calling studio's own accrued, unpaid revenue.
+ * This computes that ledger from the studio's events/orders (RLS-scoped)
+ * minus everything the studio has already withdrawn.
+ */
+async function getStudioLedger(
+  supabase: SupabaseClient<any, any, any>,
+  studioId: string,
 ): Promise<{ earnedPence: number; withdrawnPence: number; entitledPence: number }> {
   const { data: events, error: eventsError } = await supabase
     .from("events")
     .select("id")
-    .eq("photographer_id", userId);
+    .eq("studio_id", studioId);
   if (eventsError) throw new Error("Could not load your events.");
 
   const eventIds = (events ?? []).map((e: { id: string }) => e.id);
@@ -45,7 +64,7 @@ async function getPhotographerLedger(
   const { data: payouts, error: payoutsError } = await supabase
     .from("payouts")
     .select("amount_pence, status")
-    .eq("user_id", userId);
+    .eq("studio_id", studioId);
   if (payoutsError) throw new Error("Could not load your withdrawals.");
 
   const withdrawnPence = (payouts ?? [])
@@ -78,7 +97,8 @@ export const getPayoutBalance = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutBalanceResult> => {
     try {
-      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      const studioId = await requireOwnedStudio(context.supabase, context.userId);
+      const ledger = await getStudioLedger(context.supabase, studioId);
 
       const stripe = createStripeClient(data.environment);
       const balance = await stripe.balance.retrieve();
@@ -121,7 +141,8 @@ export const createPayout = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutResult> => {
     try {
-      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      const studioId = await requireOwnedStudio(context.supabase, context.userId);
+      const ledger = await getStudioLedger(context.supabase, studioId);
       if (ledger.entitledPence <= 0) {
         return { error: "You have no withdrawable earnings yet." };
       }
@@ -154,6 +175,7 @@ export const createPayout = createServerFn({ method: "POST" })
         .from("payouts")
         .insert({
           user_id: context.userId,
+          studio_id: studioId,
           stripe_payout_id: payout.id,
           amount_pence: amountPence,
           currency: CURRENCY,
@@ -200,7 +222,7 @@ export const listPayouts = createServerFn({ method: "POST" })
       const { data, error } = await context.supabase
         .from("payouts")
         .select("id, stripe_payout_id, amount_pence, currency, status, failure_code, created_at")
-        .eq("user_id", context.userId)
+        .eq("studio_id", await requireOwnedStudio(context.supabase, context.userId))
         .order("created_at", { ascending: false })
         .limit(20);
 

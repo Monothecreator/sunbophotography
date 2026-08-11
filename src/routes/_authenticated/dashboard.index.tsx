@@ -4,6 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatGBP } from "@/lib/pricing";
 import { ApplePayStatusCard } from "@/components/ApplePayStatusCard";
+import { InstallAppCard } from "@/components/InstallAppCard";
+import { useStudio } from "@/lib/useStudio";
 import { getStripeEnvironment } from "@/lib/stripe";
 import {
   createPayout,
@@ -35,24 +37,36 @@ function Dashboard() {
   const [editingEvent, setEditingEvent] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState("");
 
+  const { data: studioContext, isLoading: studioLoading } = useStudio();
+  const studio = studioContext?.studio ?? null;
+  const isOwner = studioContext?.role === "owner";
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
   const fetchPayouts = useServerFn(listPayouts);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", studio?.id, isOwner],
+    enabled: Boolean(studio),
     queryFn: async () => {
-      const [{ data: events }, { data: orders }, { data: views }, { data: people }] =
-        await Promise.all([
-          supabase.from("events").select("*").order("created_at", { ascending: false }),
-          supabase.from("orders").select("*").eq("status", "paid"),
-          supabase.from("gallery_views").select("id, event_id"),
-          supabase.from("people").select("id, event_id"),
-        ]);
+      const [{ data: events }, ordersRes, { data: views }, { data: people }] = await Promise.all([
+        supabase.from("events").select("*").order("created_at", { ascending: false }),
+        // Members are blocked from order rows by policy; skip the request entirely.
+        isOwner
+          ? supabase.from("orders").select("*").eq("status", "paid")
+          : Promise.resolve({ data: [] as never[] }),
+        supabase.from("gallery_views").select("id, event_id"),
+        supabase.from("people").select("id, event_id"),
+      ]);
       return {
         events: events ?? [],
-        orders: orders ?? [],
+        orders: (ordersRes.data ?? []) as {
+          event_id: string;
+          person_id: string | null;
+          amount_pence: number;
+          refunded_pence: number | null;
+          photo_ids: string[] | null;
+        }[],
         views: views ?? [],
         people: people ?? [],
       };
@@ -62,10 +76,15 @@ function Dashboard() {
   async function createEvent(e: React.FormEvent) {
     e.preventDefault();
     const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
+    if (!user.user || !studio) return;
     const { data: created } = await supabase
       .from("events")
-      .insert({ photographer_id: user.user.id, name, date: date || null })
+      .insert({
+        photographer_id: user.user.id,
+        studio_id: studio.id,
+        name,
+        date: date || null,
+      })
       .select("id")
       .single();
     setName("");
@@ -127,8 +146,26 @@ function Dashboard() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="font-display text-base font-semibold">SunboMedia</span>
+          <span className="flex items-center gap-2">
+            {studio?.logo_url && (
+              <img
+                src={studio.logo_url}
+                alt=""
+                className="h-7 w-7 rounded-md object-cover"
+                width={28}
+                height={28}
+              />
+            )}
+            <span className="font-display text-base font-semibold">
+              {studio?.name ?? "SunboMedia"}
+            </span>
+          </span>
           <div className="flex items-center gap-4">
+          {isOwner && (
+            <Link to="/dashboard/team" className="text-sm text-muted-foreground hover:text-foreground">
+              Team
+            </Link>
+          )}
           <Link to="/dashboard/account" className="text-sm text-muted-foreground hover:text-foreground">
             Account
           </Link>
@@ -149,12 +186,25 @@ function Dashboard() {
 
       <div className="mx-auto max-w-6xl px-6 py-8">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
+        {studioLoading && (
+          <p className="mt-2 text-sm text-muted-foreground">Loading your studio…</p>
+        )}
+        {!studioLoading && !studio && (
+          <p className="surface mt-4 p-4 text-sm text-destructive">
+            No studio is linked to this account yet. Sign out and back in, or contact support.
+          </p>
+        )}
+
+        <div className="mt-6">
+          <InstallAppCard />
+        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Total revenue" value={formatGBP(revenue)} />
-          <Stat label="Paying customers" value={String(customers)} />
-          <Stat label="Photos sold" value={String(downloads)} />
+          {isOwner && <Stat label="Total revenue" value={formatGBP(revenue)} />}
+          {isOwner && <Stat label="Paying customers" value={String(customers)} />}
+          {isOwner && <Stat label="Photos sold" value={String(downloads)} />}
           <Stat label="Gallery views" value={String(data?.views.length ?? 0)} />
+          <Stat label="Events" value={String(data?.events.length ?? 0)} />
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[2fr_1fr]">
@@ -218,9 +268,11 @@ function Dashboard() {
                         {ev.date ?? "No date"} · {evPeople} people · {evViews} views
                       </p>
                     </Link>
-                    <span className="font-display text-lg font-semibold">
-                      {formatGBP(evRevenue)}
-                    </span>
+                    {isOwner && (
+                      <span className="font-display text-lg font-semibold">
+                        {formatGBP(evRevenue)}
+                      </span>
+                    )}
                     <div className="flex shrink-0 gap-2">
                       <button
                         aria-label={`Rename ${ev.name}`}
@@ -272,22 +324,26 @@ function Dashboard() {
                 Create event
               </button>
             </form>
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold">Payments</h2>
-              <div className="mt-3">
-                <ApplePayStatusCard />
-              </div>
-            </div>
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold">Withdraw funds</h2>
-              <div className="mt-3">
-                <PayoutsCard
-                  fetchBalance={fetchBalance}
-                  doPayout={doPayout}
-                  fetchPayouts={fetchPayouts}
-                />
-              </div>
-            </div>
+            {isOwner && (
+              <>
+                <div className="mt-8">
+                  <h2 className="text-lg font-semibold">Payments</h2>
+                  <div className="mt-3">
+                    <ApplePayStatusCard />
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <h2 className="text-lg font-semibold">Withdraw funds</h2>
+                  <div className="mt-3">
+                    <PayoutsCard
+                      fetchBalance={fetchBalance}
+                      doPayout={doPayout}
+                      fetchPayouts={fetchPayouts}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         </div>
       </div>

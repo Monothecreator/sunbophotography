@@ -27,6 +27,7 @@ export type Database = {
           price_single_pence: number
           public_token: string
           status: string
+          studio_id: string
         }
         Insert: {
           cover_image?: string | null
@@ -40,6 +41,7 @@ export type Database = {
           price_single_pence?: number
           public_token?: string
           status?: string
+          studio_id: string
         }
         Update: {
           cover_image?: string | null
@@ -53,8 +55,17 @@ export type Database = {
           price_single_pence?: number
           public_token?: string
           status?: string
+          studio_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gallery_views: {
         Row: {
@@ -167,6 +178,7 @@ export type Database = {
           id: string
           status: string
           stripe_payout_id: string
+          studio_id: string | null
           updated_at: string
           user_id: string
         }
@@ -178,6 +190,7 @@ export type Database = {
           id?: string
           status?: string
           stripe_payout_id: string
+          studio_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -189,10 +202,19 @@ export type Database = {
           id?: string
           status?: string
           stripe_payout_id?: string
+          studio_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payouts_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       people: {
         Row: {
@@ -298,15 +320,135 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          role: Database["public"]["Enums"]["studio_role"]
+          studio_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["studio_role"]
+          studio_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["studio_role"]
+          studio_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_invitations_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["studio_role"]
+          studio_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["studio_role"]
+          studio_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["studio_role"]
+          studio_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_members_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studios: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          slug: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          slug?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          slug?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      event_studio_id: { Args: { _event_id: string }; Returns: string }
+      is_studio_member: {
+        Args: { _studio_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_studio_owner: {
+        Args: { _studio_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      studio_role: "owner" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -433,6 +575,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      studio_role: ["owner", "member"],
+    },
   },
 } as const
