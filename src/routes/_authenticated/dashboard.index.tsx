@@ -37,24 +37,36 @@ function Dashboard() {
   const [editingEvent, setEditingEvent] = useState<string | null>(null);
   const [eventDraft, setEventDraft] = useState("");
 
+  const { data: studioContext, isLoading: studioLoading } = useStudio();
+  const studio = studioContext?.studio ?? null;
+  const isOwner = studioContext?.role === "owner";
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
   const fetchPayouts = useServerFn(listPayouts);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", studio?.id, isOwner],
+    enabled: Boolean(studio),
     queryFn: async () => {
-      const [{ data: events }, { data: orders }, { data: views }, { data: people }] =
-        await Promise.all([
-          supabase.from("events").select("*").order("created_at", { ascending: false }),
-          supabase.from("orders").select("*").eq("status", "paid"),
-          supabase.from("gallery_views").select("id, event_id"),
-          supabase.from("people").select("id, event_id"),
-        ]);
+      const [{ data: events }, ordersRes, { data: views }, { data: people }] = await Promise.all([
+        supabase.from("events").select("*").order("created_at", { ascending: false }),
+        // Members are blocked from order rows by policy; skip the request entirely.
+        isOwner
+          ? supabase.from("orders").select("*").eq("status", "paid")
+          : Promise.resolve({ data: [] as never[] }),
+        supabase.from("gallery_views").select("id, event_id"),
+        supabase.from("people").select("id, event_id"),
+      ]);
       return {
         events: events ?? [],
-        orders: orders ?? [],
+        orders: (ordersRes.data ?? []) as {
+          event_id: string;
+          person_id: string | null;
+          amount_pence: number;
+          refunded_pence: number | null;
+          photo_ids: string[] | null;
+        }[],
         views: views ?? [],
         people: people ?? [],
       };
@@ -64,10 +76,15 @@ function Dashboard() {
   async function createEvent(e: React.FormEvent) {
     e.preventDefault();
     const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
+    if (!user.user || !studio) return;
     const { data: created } = await supabase
       .from("events")
-      .insert({ photographer_id: user.user.id, name, date: date || null })
+      .insert({
+        photographer_id: user.user.id,
+        studio_id: studio.id,
+        name,
+        date: date || null,
+      })
       .select("id")
       .single();
     setName("");
