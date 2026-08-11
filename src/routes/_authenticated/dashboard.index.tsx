@@ -324,23 +324,26 @@ function Dashboard() {
                 Create event
               </button>
             </form>
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold">Payments</h2>
-              <div className="mt-3">
-                <ApplePayStatusCard />
-              </div>
-            </div>
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold">Withdraw funds</h2>
-              <div className="mt-3">
-                <PayoutsCard
-                  fetchBalance={fetchBalance}
-                  doPayout={doPayout}
-                  fetchPayouts={fetchPayouts}
-                />
-              </div>
-            </div>
-          </section>
+            {isOwner && (
+              <>
+                <div className="mt-8">
+                  <h2 className="text-lg font-semibold">Payments</h2>
+                  <div className="mt-3">
+                    <ApplePayStatusCard />
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <h2 className="text-lg font-semibold">Withdraw funds</h2>
+                  <div className="mt-3">
+                    <PayoutsCard
+                      fetchBalance={fetchBalance}
+                      doPayout={doPayout}
+                      fetchPayouts={fetchPayouts}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
         </div>
       </div>
     </main>
