@@ -146,8 +146,26 @@ function Dashboard() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="font-display text-base font-semibold">SunboMedia</span>
+          <span className="flex items-center gap-2">
+            {studio?.logo_url && (
+              <img
+                src={studio.logo_url}
+                alt=""
+                className="h-7 w-7 rounded-md object-cover"
+                width={28}
+                height={28}
+              />
+            )}
+            <span className="font-display text-base font-semibold">
+              {studio?.name ?? "SunboMedia"}
+            </span>
+          </span>
           <div className="flex items-center gap-4">
+          {isOwner && (
+            <Link to="/dashboard/team" className="text-sm text-muted-foreground hover:text-foreground">
+              Team
+            </Link>
+          )}
           <Link to="/dashboard/account" className="text-sm text-muted-foreground hover:text-foreground">
             Account
           </Link>
@@ -168,12 +186,25 @@ function Dashboard() {
 
       <div className="mx-auto max-w-6xl px-6 py-8">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
+        {studioLoading && (
+          <p className="mt-2 text-sm text-muted-foreground">Loading your studio…</p>
+        )}
+        {!studioLoading && !studio && (
+          <p className="surface mt-4 p-4 text-sm text-destructive">
+            No studio is linked to this account yet. Sign out and back in, or contact support.
+          </p>
+        )}
+
+        <div className="mt-6">
+          <InstallAppCard />
+        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Total revenue" value={formatGBP(revenue)} />
-          <Stat label="Paying customers" value={String(customers)} />
-          <Stat label="Photos sold" value={String(downloads)} />
+          {isOwner && <Stat label="Total revenue" value={formatGBP(revenue)} />}
+          {isOwner && <Stat label="Paying customers" value={String(customers)} />}
+          {isOwner && <Stat label="Photos sold" value={String(downloads)} />}
           <Stat label="Gallery views" value={String(data?.views.length ?? 0)} />
+          <Stat label="Events" value={String(data?.events.length ?? 0)} />
         </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[2fr_1fr]">
