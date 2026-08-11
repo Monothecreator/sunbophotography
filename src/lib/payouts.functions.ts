@@ -97,7 +97,8 @@ export const getPayoutBalance = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutBalanceResult> => {
     try {
-      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      const studioId = await requireOwnedStudio(context.supabase, context.userId);
+      const ledger = await getStudioLedger(context.supabase, studioId);
 
       const stripe = createStripeClient(data.environment);
       const balance = await stripe.balance.retrieve();
@@ -140,7 +141,8 @@ export const createPayout = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<PayoutResult> => {
     try {
-      const ledger = await getPhotographerLedger(context.supabase, context.userId);
+      const studioId = await requireOwnedStudio(context.supabase, context.userId);
+      const ledger = await getStudioLedger(context.supabase, studioId);
       if (ledger.entitledPence <= 0) {
         return { error: "You have no withdrawable earnings yet." };
       }
@@ -173,6 +175,7 @@ export const createPayout = createServerFn({ method: "POST" })
         .from("payouts")
         .insert({
           user_id: context.userId,
+          studio_id: studioId,
           stripe_payout_id: payout.id,
           amount_pence: amountPence,
           currency: CURRENCY,
@@ -219,7 +222,7 @@ export const listPayouts = createServerFn({ method: "POST" })
       const { data, error } = await context.supabase
         .from("payouts")
         .select("id, stripe_payout_id, amount_pence, currency, status, failure_code, created_at")
-        .eq("user_id", context.userId)
+        .eq("studio_id", await requireOwnedStudio(context.supabase, context.userId))
         .order("created_at", { ascending: false })
         .limit(20);
 
