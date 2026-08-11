@@ -268,9 +268,11 @@ function Dashboard() {
                         {ev.date ?? "No date"} · {evPeople} people · {evViews} views
                       </p>
                     </Link>
-                    <span className="font-display text-lg font-semibold">
-                      {formatGBP(evRevenue)}
-                    </span>
+                    {isOwner && (
+                      <span className="font-display text-lg font-semibold">
+                        {formatGBP(evRevenue)}
+                      </span>
+                    )}
                     <div className="flex shrink-0 gap-2">
                       <button
                         aria-label={`Rename ${ev.name}`}
