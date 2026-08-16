@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatGBP } from "@/lib/pricing";
 import { ApplePayStatusCard } from "@/components/ApplePayStatusCard";
 import { InstallAppCard } from "@/components/InstallAppCard";
-import { useStudio } from "@/lib/useStudio";
+import { useStudio, useSwitchStudio } from "@/lib/useStudio";
 import { getStripeEnvironment } from "@/lib/stripe";
 import {
   createPayout,
