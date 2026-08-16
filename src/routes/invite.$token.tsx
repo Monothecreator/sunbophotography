@@ -3,8 +3,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptInvitation } from "@/lib/studio.functions";
+import { setActiveStudioId } from "@/lib/useStudio";
 
-export const Route = createFileRoute("/_authenticated/invite/$token")({
+export const Route = createFileRoute("/invite/$token")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Join a studio — SunboMedia" },
@@ -21,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/invite/$token")({
 });
 
 function InvitePage() {
-  const { token } = useParams({ from: "/_authenticated/invite/$token" });
+  const { token } = useParams({ from: "/invite/$token" });
   const navigate = useNavigate();
   const accept = useServerFn(acceptInvitation);
   const [state, setState] = useState<
@@ -31,6 +33,18 @@ function InvitePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Guests arriving from an emailed link have no session yet — send them to
+      // sign in and bring them straight back here with the token intact.
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        navigate({
+          to: "/auth",
+          search: { redirect: `/invite/${token}` },
+          replace: true,
+        });
+        return;
+      }
+
       const res = await accept({ data: { token } });
       if (cancelled) return;
       if ("error" in res) {
@@ -38,6 +52,7 @@ function InvitePage() {
         return;
       }
       setState({ kind: "done", studio: res.studioName });
+      if (res.studioId) setActiveStudioId(res.studioId);
       await supabase.auth.refreshSession();
       setTimeout(() => navigate({ to: "/dashboard", replace: true }), 1500);
     })();

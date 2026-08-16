@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatGBP } from "@/lib/pricing";
 import { ApplePayStatusCard } from "@/components/ApplePayStatusCard";
 import { InstallAppCard } from "@/components/InstallAppCard";
-import { useStudio } from "@/lib/useStudio";
+import { useStudio, useSwitchStudio } from "@/lib/useStudio";
 import { getStripeEnvironment } from "@/lib/stripe";
 import {
   createPayout,
@@ -40,6 +40,9 @@ function Dashboard() {
   const { data: studioContext, isLoading: studioLoading } = useStudio();
   const studio = studioContext?.studio ?? null;
   const isOwner = studioContext?.role === "owner";
+  const memberships = studioContext?.memberships ?? [];
+  const switchStudio = useSwitchStudio();
+
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
@@ -50,7 +53,12 @@ function Dashboard() {
     enabled: Boolean(studio),
     queryFn: async () => {
       const [{ data: events }, ordersRes, { data: views }, { data: people }] = await Promise.all([
-        supabase.from("events").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("events")
+          .select("*")
+          .eq("studio_id", studio!.id)
+          .order("created_at", { ascending: false }),
+
         // Members are blocked from order rows by policy; skip the request entirely.
         isOwner
           ? supabase.from("orders").select("*").eq("status", "paid")
@@ -156,10 +164,27 @@ function Dashboard() {
                 height={28}
               />
             )}
-            <span className="font-display text-base font-semibold">
-              {studio?.name ?? "SunboMedia"}
-            </span>
+            {memberships.length > 1 ? (
+              <select
+                value={studio?.id ?? ""}
+                onChange={(e) => switchStudio(e.target.value)}
+                aria-label="Active studio"
+                className="rounded-md border border-input bg-background px-2 py-1 font-display text-base font-semibold"
+              >
+                {memberships.map((m) => (
+                  <option key={m.studio.id} value={m.studio.id}>
+                    {m.studio.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-display text-base font-semibold">
+                {studio?.name ?? "SunboMedia"}
+              </span>
+            )}
           </span>
+
+
           <div className="flex items-center gap-4">
           {isOwner && (
             <Link to="/dashboard/team" className="text-sm text-muted-foreground hover:text-foreground">
