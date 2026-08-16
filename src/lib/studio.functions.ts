@@ -198,7 +198,8 @@ export const acceptInvitation = createServerFn({ method: "POST" })
     return data;
   })
   .handler(
-    async ({ data, context }): Promise<{ studioName: string } | { error: string }> => {
+    async ({ data, context }): Promise<{ studioName: string; studioId: string } | { error: string }> => {
+
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: invite } = await supabaseAdmin
         .from("studio_invitations")

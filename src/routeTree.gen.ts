@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardAccountRouteImport } from './routes/_authenticated/dashboard.account'
 import { Route as AuthenticatedDashboardTeamRouteImport } from './routes/_authenticated/dashboard.team'
@@ -42,6 +43,11 @@ const AuthRoute = AuthRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardIndexRoute =
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/dashboard/team': typeof AuthenticatedDashboardTeamRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/dashboard/team': typeof AuthenticatedDashboardTeamRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/_authenticated/dashboard/account': typeof AuthenticatedDashboardAccountRoute
   '/_authenticated/dashboard/team': typeof AuthenticatedDashboardTeamRoute
   '/album/$token/downloads': typeof AlbumTokenDownloadsRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/invite/$token'
     | '/dashboard/account'
     | '/dashboard/team'
     | '/album/$token/downloads'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/sitemap.xml'
+    | '/invite/$token'
     | '/dashboard/account'
     | '/dashboard/team'
     | '/album/$token/downloads'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/sitemap.xml'
+    | '/invite/$token'
     | '/_authenticated/dashboard/account'
     | '/_authenticated/dashboard/team'
     | '/album/$token/downloads'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   AlbumTokenDownloadsRoute: typeof AlbumTokenDownloadsRoute
   AlbumTokenStatusRoute: typeof AlbumTokenStatusRoute
   GalleryTokenDownloadsRoute: typeof GalleryTokenDownloadsRoute
@@ -249,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/dashboard/': {
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  InviteTokenRoute: InviteTokenRoute,
   AlbumTokenDownloadsRoute: AlbumTokenDownloadsRoute,
   AlbumTokenStatusRoute: AlbumTokenStatusRoute,
   GalleryTokenDownloadsRoute: GalleryTokenDownloadsRoute,
