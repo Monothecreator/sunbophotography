@@ -107,7 +107,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/dashboard", replace: true });
+      goNext();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -154,7 +154,7 @@ function AuthPage() {
     setMessage(null);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth`,
+        redirect_uri: `${window.location.origin}/auth${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`,
       });
       if (result.error) {
         setMessage(result.error.message ?? "Google sign-in failed");
@@ -170,7 +170,7 @@ function AuthPage() {
         return;
       }
       await ensureProfile();
-      navigate({ to: "/dashboard", replace: true });
+      goNext();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
