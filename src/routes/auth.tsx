@@ -26,6 +26,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +35,19 @@ function AuthPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, setRecovering] = useState(false);
+
+  // Honour a preserved destination (e.g. a studio invite link) after sign-in.
+  const inviteToken = redirect?.startsWith("/invite/")
+    ? redirect.slice("/invite/".length).split(/[?#/]/)[0]
+    : undefined;
+
+  const goNext = useCallback(() => {
+    if (inviteToken) {
+      navigate({ to: "/invite/$token", params: { token: inviteToken }, replace: true });
+      return;
+    }
+    navigate({ to: "/dashboard", replace: true });
+  }, [inviteToken, navigate]);
 
   useEffect(() => {
     // A recovery link drops the user here with a live session; send them to
@@ -44,13 +58,14 @@ function AuthPage() {
       return;
     }
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) goNext();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) navigate({ to: "/dashboard", replace: true });
+      if (event === "SIGNED_IN" && session) goNext();
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, goNext]);
+
 
   async function sendReset() {
     if (!email) {
