@@ -156,10 +156,25 @@ function Dashboard() {
                 height={28}
               />
             )}
-            <span className="font-display text-base font-semibold">
-              {studio?.name ?? "SunboMedia"}
-            </span>
-          </span>
+            {memberships.length > 1 ? (
+              <select
+                value={studio?.id ?? ""}
+                onChange={(e) => switchStudio(e.target.value)}
+                aria-label="Active studio"
+                className="rounded-md border border-input bg-background px-2 py-1 font-display text-base font-semibold"
+              >
+                {memberships.map((m) => (
+                  <option key={m.studio.id} value={m.studio.id}>
+                    {m.studio.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-display text-base font-semibold">
+                {studio?.name ?? "SunboMedia"}
+              </span>
+            )}
+
           <div className="flex items-center gap-4">
           {isOwner && (
             <Link to="/dashboard/team" className="text-sm text-muted-foreground hover:text-foreground">
