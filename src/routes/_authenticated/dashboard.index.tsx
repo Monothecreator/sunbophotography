@@ -40,6 +40,9 @@ function Dashboard() {
   const { data: studioContext, isLoading: studioLoading } = useStudio();
   const studio = studioContext?.studio ?? null;
   const isOwner = studioContext?.role === "owner";
+  const memberships = studioContext?.memberships ?? [];
+  const switchStudio = useSwitchStudio();
+
 
   const fetchBalance = useServerFn(getPayoutBalance);
   const doPayout = useServerFn(createPayout);
