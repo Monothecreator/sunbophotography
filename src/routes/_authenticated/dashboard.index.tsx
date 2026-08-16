@@ -53,7 +53,12 @@ function Dashboard() {
     enabled: Boolean(studio),
     queryFn: async () => {
       const [{ data: events }, ordersRes, { data: views }, { data: people }] = await Promise.all([
-        supabase.from("events").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("events")
+          .select("*")
+          .eq("studio_id", studio!.id)
+          .order("created_at", { ascending: false }),
+
         // Members are blocked from order rows by policy; skip the request entirely.
         isOwner
           ? supabase.from("orders").select("*").eq("status", "paid")
