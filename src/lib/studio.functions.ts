@@ -228,6 +228,6 @@ export const acceptInvitation = createServerFn({ method: "POST" })
 
       const studioName =
         (invite as unknown as { studios?: { name?: string } }).studios?.name ?? "the studio";
-      return { studioName };
+      return { studioName, studioId: invite.studio_id as string };
     },
   );
