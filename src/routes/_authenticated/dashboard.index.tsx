@@ -174,6 +174,8 @@ function Dashboard() {
                 {studio?.name ?? "SunboMedia"}
               </span>
             )}
+          </span>
+
 
           <div className="flex items-center gap-4">
           {isOwner && (
