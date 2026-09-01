@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 
 export const Route = createFileRoute("/auth")({
@@ -149,28 +148,22 @@ function AuthPage() {
   }
 
   async function signInWithGoogle() {
-
     setBusy(true);
     setMessage(null);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`,
+      // Use Supabase's native OAuth flow instead of Lovable's Cloud wrapper
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`,
+        },
       });
-      if (result.error) {
-        setMessage(result.error.message ?? "Google sign-in failed");
+      if (error) {
+        setMessage(error.message ?? "Google sign-in failed");
         setBusy(false);
         return;
       }
-      if (result.redirected) return;
-      // Session is set by the helper — wait for it before leaving the page.
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        setMessage("Google sign-in did not complete. Please try again.");
-        setBusy(false);
-        return;
-      }
-      await ensureProfile();
-      goNext();
+      // signInWithOAuth redirects to Google, so we don't need additional waiting logic
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
