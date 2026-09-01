@@ -83,21 +83,19 @@ function receiptHtml(input: {
  * sender is configured yet, so settlement is never blocked by email.
  */
 async function deliver(to: string, subject: string, html: string): Promise<boolean> {
-  const lovableKey = process.env["LOVABLE_API_KEY"];
   const resendKey = process.env["RESEND_API_KEY"];
   const from = process.env["EMAIL_FROM"];
 
-  if (!from || !resendKey || !lovableKey) {
+  if (!from || !resendKey) {
     console.warn("Receipt not sent: no verified sender domain configured yet");
     return false;
   }
 
-  const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": resendKey,
+      Authorization: `Bearer ${resendKey}`,
     },
     body: JSON.stringify({ from, to: [to], subject, html }),
   });
