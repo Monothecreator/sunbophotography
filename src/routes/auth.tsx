@@ -57,37 +57,29 @@ function AuthPage() {
       return;
     }
 
-    // Check for OAuth redirect (has access_token in hash)
-    const isOAuthReturn = typeof window !== "undefined" && window.location.hash.includes("access_token");
-    
-    // If returning from OAuth, wait longer for session to be established
-    const sessionCheckDelay = isOAuthReturn ? 2000 : 100;
-
-    let cleanup: (() => void) | null = null;
-
-    const setupAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        await ensureProfile();
-        goNext();
-        return;
-      }
-      
-      // If still no session, listen for auth changes
-      const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" && session) {
-          ensureProfile().then(() => goNext());
+    // Set up auth state listener first (this handles OAuth callbacks)
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        console.log("✓ Auth state changed to SIGNED_IN");
+        try {
+          await ensureProfile();
+          console.log("✓ Profile ensured, redirecting to dashboard");
+          goNext();
+        } catch (err) {
+          console.error("Error ensuring profile:", err);
         }
-      });
-      cleanup = () => sub.subscription.unsubscribe();
-    };
+      }
+    });
 
-    const timer = setTimeout(setupAuth, sessionCheckDelay);
+    // Also check if there's already a session (e.g., page reload while logged in)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        console.log("✓ Found existing session, ensuring profile");
+        ensureProfile().then(() => goNext());
+      }
+    });
 
-    return () => {
-      clearTimeout(timer);
-      cleanup?.();
-    };
+    return () => sub.subscription.unsubscribe();
   }, [navigate, goNext]);
 
 
