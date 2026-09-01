@@ -57,41 +57,37 @@ function AuthPage() {
       return;
     }
 
-    // Check if we're returning from OAuth (hash contains access_token)
-    const hasOAuthHash = typeof window !== "undefined" && 
-      (window.location.hash.includes("access_token") || 
-       window.location.hash.includes("error="));
+    // Check for OAuth redirect (has access_token in hash)
+    const isOAuthReturn = typeof window !== "undefined" && window.location.hash.includes("access_token");
+    
+    // If returning from OAuth, wait longer for session to be established
+    const sessionCheckDelay = isOAuthReturn ? 2000 : 100;
 
-    // Check for existing session immediately
-    const checkSession = async () => {
+    let cleanup: (() => void) | null = null;
+
+    const setupAuth = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         await ensureProfile();
         goNext();
-        return true;
+        return;
       }
-      return false;
+      
+      // If still no session, listen for auth changes
+      const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          ensureProfile().then(() => goNext());
+        }
+      });
+      cleanup = () => sub.subscription.unsubscribe();
     };
 
-    // If coming from OAuth, wait a bit longer for session to be parsed
-    if (hasOAuthHash) {
-      setTimeout(() => {
-        checkSession();
-      }, 1000);
-    } else {
-      checkSession();
-    }
+    const timer = setTimeout(setupAuth, sessionCheckDelay);
 
-    // Also listen for auth state changes as a fallback
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        ensureProfile().then(() => {
-          goNext();
-        });
-      }
-    });
-
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      cleanup?.();
+    };
   }, [navigate, goNext]);
 
 
