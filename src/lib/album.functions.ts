@@ -153,18 +153,10 @@ export const startAlbumCheckout = createServerFn({ method: "POST" })
         metadata: { orderId: order.id, eventId: event.id },
       } as unknown as Stripe.Checkout.SessionCreateParams;
 
-      let session: Stripe.Checkout.Session;
-      try {
-        session = await stripe.checkout.sessions.create(
-          { ...params, managed_payments: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
-          { idempotencyKey: `order_${order.id}_managed` },
-        );
-      } catch {
-        session = await stripe.checkout.sessions.create(
-          { ...params, automatic_tax: { enabled: true } } as Stripe.Checkout.SessionCreateParams,
-          { idempotencyKey: `order_${order.id}_tax` },
-        );
-      }
+      // No automatic tax: the amount charged is exactly the displayed price.
+      const session = await stripe.checkout.sessions.create(params, {
+        idempotencyKey: `order_${order.id}`,
+      });
 
       await db.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
       return { clientSecret: session.client_secret ?? "", orderId: order.id };
