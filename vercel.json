@@ -1,0 +1,29 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "other",
+  "outputDirectory": ".output/public",
+  "env": {
+    "VITE_SUPABASE_URL": {
+      "description": "Your Supabase project URL (from Settings → API)"
+    },
+    "VITE_SUPABASE_ANON_KEY": {
+      "description": "Your Supabase anonymous/public key (from Settings → API)"
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "description": "Your Supabase service role key (from Settings → API) - SECRET"
+    },
+    "VITE_STRIPE_PUBLIC_KEY": {
+      "description": "Your Stripe public key (starts with pk_ from Stripe Dashboard)"
+    },
+    "STRIPE_SECRET_KEY": {
+      "description": "Your Stripe secret key (starts with sk_ from Stripe Dashboard) - SECRET"
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}

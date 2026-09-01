@@ -1,0 +1,41 @@
+# Netlify Configuration for TanStack Start + Supabase
+
+[build]
+# Build command and directory
+command = "npm run build"
+publish = ".output/public"
+
+# Node version for build
+environment = { NODE_VERSION = "20.x", NPM_FLAGS = "--legacy-peer-deps" }
+
+# Watch for these files to trigger builds
+ignore = "git diff --quiet HEAD^ HEAD -- '*.json' 'package-lock.json'"
+
+[[redirects]]
+# Redirect all non-matching routes to index.html for client-side routing
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[headers]]
+# Cache control for static assets
+for = "/*"
+
+  [headers.values]
+  # Cache bust strategy: cache hash-named files forever, others for shorter period
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+# Don't cache HTML
+for = "/*.html"
+
+  [headers.values]
+  Cache-Control = "public, max-age=0, must-revalidate"
+
+# Environment Variables Setup
+# Add these in Netlify UI: Site settings → Build & deploy → Environment
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_ANON_KEY=your-anon-key
+# SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# VITE_STRIPE_PUBLIC_KEY=pk_test_...
+# STRIPE_SECRET_KEY=sk_test_...
