@@ -57,20 +57,36 @@ function AuthPage() {
       return;
     }
 
-    // Check for existing session immediately
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        goNext();
-        return;
-      }
-    });
+    // Check if we're returning from OAuth (hash contains access_token)
+    const hasOAuthHash = typeof window !== "undefined" && 
+      (window.location.hash.includes("access_token") || 
+       window.location.hash.includes("error="));
 
-    // Listen for auth state changes (including OAuth callbacks)
+    // Check for existing session immediately
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        await ensureProfile();
+        goNext();
+        return true;
+      }
+      return false;
+    };
+
+    // If coming from OAuth, wait a bit longer for session to be parsed
+    if (hasOAuthHash) {
+      setTimeout(() => {
+        checkSession();
+      }, 1000);
+    } else {
+      checkSession();
+    }
+
+    // Also listen for auth state changes as a fallback
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        // Ensure profile exists, then redirect
         ensureProfile().then(() => {
-          setTimeout(() => goNext(), 500);
+          goNext();
         });
       }
     });
