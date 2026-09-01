@@ -6,51 +6,68 @@ export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
 });
 
+function parseHashFragment(hash: string) {
+  // Parse fragment like: #access_token=eyJ...&expires_at=1234&expires_in=3600&refresh_token=abc&token_type=bearer
+  const fragment = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  return {
+    access_token: fragment.get("access_token"),
+    refresh_token: fragment.get("refresh_token"),
+    expires_at: fragment.get("expires_at") ? parseInt(fragment.get("expires_at")!) : undefined,
+    expires_in: fragment.get("expires_in") ? parseInt(fragment.get("expires_in")!) : undefined,
+    token_type: fragment.get("token_type"),
+  };
+}
+
 function AuthCallbackPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log("🔄 OAuth callback received, setting up listener for session...");
+        console.log("🔄 OAuth callback: parsing hash tokens...");
+        console.log("📍 Current URL:", window.location.href);
         
-        // Set up a listener that will fire when the session is ready
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === "INITIAL_SESSION" && session) {
-            console.log("✓ INITIAL_SESSION fired with session:", session.user?.email);
-            listener.subscription.unsubscribe();
-            navigate({ to: "/dashboard", replace: true });
-          } else if (event === "SIGNED_IN" && session) {
-            console.log("✓ SIGNED_IN fired with session:", session.user?.email);
-            listener.subscription.unsubscribe();
-            navigate({ to: "/dashboard", replace: true });
-          }
+        // Parse tokens from hash
+        const tokens = parseHashFragment(window.location.hash);
+        console.log("📦 Parsed tokens:", {
+          access_token: tokens.access_token ? `${tokens.access_token.slice(0, 20)}...` : null,
+          refresh_token: tokens.refresh_token ? "yes" : "no",
+          expires_in: tokens.expires_in,
         });
-
-        // Wait for Supabase to parse the access_token from the URL hash
-        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Also explicitly check for session
-        const { data } = await supabase.auth.getSession();
-        
-        if (data.session) {
-          console.log("✓ Found session via getSession():", data.session.user?.email);
-          listener.subscription.unsubscribe();
-          navigate({ to: "/dashboard", replace: true });
+        if (!tokens.access_token) {
+          console.error("❌ No access_token found in URL hash");
+          navigate({ to: "/auth", replace: true });
           return;
         }
         
-        // If no session yet, wait a bit more for the listener to fire
-        console.log("⏳ Waiting for auth state change listener to fire...");
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Set the session with the tokens from the hash
+        console.log("💾 Setting session with tokens...");
+        const { data: setData, error: setError } = await supabase.auth.setSession({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token || "",
+        });
         
-        // Last check
-        const { data: data2 } = await supabase.auth.getSession();
-        if (!data2.session) {
-          console.error("❌ No session found after 3 seconds, localStorage keys:", Object.keys(localStorage).filter(k => k.includes('sb-')));
-          listener.subscription.unsubscribe();
+        if (setError) {
+          console.error("❌ Error setting session:", setError);
           navigate({ to: "/auth", replace: true });
           return;
+        }
+        
+        console.log("✓ Session set, verifying...");
+        
+        // Verify session was actually set
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session) {
+          console.log("✓ Session confirmed:", sessionData.session.user?.email);
+          console.log("✓ localStorage keys:", Object.keys(localStorage).filter(k => k.includes("sb-")));
+          
+          // Navigate to dashboard
+          navigate({ to: "/dashboard", replace: true });
+        } else {
+          console.error("❌ Session not confirmed after setSession");
+          navigate({ to: "/auth", replace: true });
         }
       } catch (err) {
         console.error("❌ Callback error:", err);
