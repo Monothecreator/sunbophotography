@@ -59,22 +59,14 @@ function AuthPage() {
 
     console.log("Setting up auth listeners...");
 
-    // Check if we have an OAuth token in the URL (redirected from Google)
-    const hasOAuthToken = typeof window !== "undefined" && window.location.hash.includes("access_token");
-    if (hasOAuthToken) {
-      console.log("OAuth token detected in URL, waiting for Supabase to parse...");
-    }
-
-    // Set up auth state listener first (this handles OAuth callbacks)
+    // Listen for auth state changes (email/password signin will trigger this)
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change:", event, "Session email:", session?.user?.email);
+      console.log("Auth state change:", event, "User:", session?.user?.email);
       if (event === "SIGNED_IN" && session) {
-        console.log("✓ Auth state changed to SIGNED_IN");
+        console.log("✓ Signed in via email/password");
         try {
           await ensureProfile();
           console.log("✓ Profile ensured, redirecting to dashboard");
-          // Clear the hash to clean up the URL
-          window.history.replaceState({}, document.title, window.location.pathname);
           goNext();
         } catch (err) {
           console.error("Error ensuring profile:", err);
@@ -82,21 +74,15 @@ function AuthPage() {
       }
     });
 
-    // Check session, but wait longer if we have an OAuth token
-    const checkSessionDelay = hasOAuthToken ? 1500 : 100;
-    const sessionTimer = setTimeout(async () => {
-      const { data } = await supabase.auth.getSession();
-      console.log("Session check after delay:", data.session?.user?.email);
+    // Check if already signed in (e.g., page reload)
+    supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        console.log("✓ Found session, ensuring profile");
-        await ensureProfile();
-        window.history.replaceState({}, document.title, window.location.pathname);
+        console.log("✓ Found existing session, redirecting to dashboard");
         goNext();
       }
-    }, checkSessionDelay);
+    });
 
     return () => {
-      clearTimeout(sessionTimer);
       console.log("Cleaning up auth listeners");
       sub.subscription.unsubscribe();
     };
@@ -189,11 +175,11 @@ function AuthPage() {
     setMessage(null);
     try {
       console.log("Starting Google OAuth flow...");
-      // Redirect back to /auth so we can detect and handle the token
+      // Redirect to dedicated callback route for code exchange
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {
