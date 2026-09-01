@@ -12,30 +12,46 @@ function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log("🔄 OAuth callback: exchanging code for session...");
+        console.log("🔄 OAuth callback received, setting up listener for session...");
         
-        // Explicitly exchange the code from the URL for a session
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        // Set up a listener that will fire when the session is ready
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "INITIAL_SESSION" && session) {
+            console.log("✓ INITIAL_SESSION fired with session:", session.user?.email);
+            listener.subscription.unsubscribe();
+            navigate({ to: "/dashboard", replace: true });
+          } else if (event === "SIGNED_IN" && session) {
+            console.log("✓ SIGNED_IN fired with session:", session.user?.email);
+            listener.subscription.unsubscribe();
+            navigate({ to: "/dashboard", replace: true });
+          }
+        });
+
+        // Wait for Supabase to parse the access_token from the URL hash
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        if (error) {
-          console.error("❌ Code exchange failed:", error);
-          navigate({ to: "/auth", replace: true });
-          return;
-        }
-        
-        // Get the newly-created session to confirm
+        // Also explicitly check for session
         const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          console.error("❌ No session after code exchange");
-          navigate({ to: "/auth", replace: true });
+        
+        if (data.session) {
+          console.log("✓ Found session via getSession():", data.session.user?.email);
+          listener.subscription.unsubscribe();
+          navigate({ to: "/dashboard", replace: true });
           return;
         }
         
-        console.log("✓ Session established:", data.session.user?.email);
-        console.log("✓ Redirecting to dashboard...");
+        // If no session yet, wait a bit more for the listener to fire
+        console.log("⏳ Waiting for auth state change listener to fire...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Navigate to dashboard now that session exists
-        navigate({ to: "/dashboard", replace: true });
+        // Last check
+        const { data: data2 } = await supabase.auth.getSession();
+        if (!data2.session) {
+          console.error("❌ No session found after 3 seconds, localStorage keys:", Object.keys(localStorage).filter(k => k.includes('sb-')));
+          listener.subscription.unsubscribe();
+          navigate({ to: "/auth", replace: true });
+          return;
+        }
       } catch (err) {
         console.error("❌ Callback error:", err);
         navigate({ to: "/auth", replace: true });
@@ -54,3 +70,4 @@ function AuthCallbackPage() {
     </div>
   );
 }
+
