@@ -56,12 +56,25 @@ function AuthPage() {
       navigate({ to: "/dashboard/account", replace: true });
       return;
     }
+
+    // Check for existing session immediately
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) goNext();
+      if (data.session) {
+        goNext();
+        return;
+      }
     });
+
+    // Listen for auth state changes (including OAuth callbacks)
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) goNext();
+      if (event === "SIGNED_IN" && session) {
+        // Ensure profile exists, then redirect
+        ensureProfile().then(() => {
+          setTimeout(() => goNext(), 500);
+        });
+      }
     });
+
     return () => sub.subscription.unsubscribe();
   }, [navigate, goNext]);
 
@@ -151,11 +164,11 @@ function AuthPage() {
     setBusy(true);
     setMessage(null);
     try {
-      // Use Supabase's native OAuth flow instead of Lovable's Cloud wrapper
+      // Use Supabase's native OAuth flow
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`,
+          redirectTo: `${window.location.origin}/auth`,
         },
       });
       if (error) {
@@ -163,7 +176,7 @@ function AuthPage() {
         setBusy(false);
         return;
       }
-      // signInWithOAuth redirects to Google, so we don't need additional waiting logic
+      // signInWithOAuth redirects to Google; session will be detected by onAuthStateChange
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
