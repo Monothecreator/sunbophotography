@@ -15,7 +15,7 @@ import { createStripeClient, type StripeEnv } from "./stripe.server";
 
 type Db = SupabaseClient<Database>;
 
-const FALLBACK_ORIGIN = "https://project--c98a6ad5-2037-47e5-b1c6-ae57bf771140.lovable.app";
+const FALLBACK_ORIGIN = "https://sunbomedia.dev";
 
 function siteOrigin(origin?: string) {
   return origin || process.env["SITE_URL"] || FALLBACK_ORIGIN;
