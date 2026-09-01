@@ -57,8 +57,11 @@ function AuthPage() {
       return;
     }
 
+    console.log("Setting up auth listeners...");
+
     // Set up auth state listener first (this handles OAuth callbacks)
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event, "Session:", session?.user?.email);
       if (event === "SIGNED_IN" && session) {
         console.log("✓ Auth state changed to SIGNED_IN");
         try {
@@ -73,13 +76,17 @@ function AuthPage() {
 
     // Also check if there's already a session (e.g., page reload while logged in)
     supabase.auth.getSession().then(({ data }) => {
+      console.log("Initial session check:", data.session?.user?.email);
       if (data.session) {
         console.log("✓ Found existing session, ensuring profile");
         ensureProfile().then(() => goNext());
       }
     });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      console.log("Cleaning up auth listeners");
+      sub.subscription.unsubscribe();
+    };
   }, [navigate, goNext]);
 
 
@@ -168,20 +175,24 @@ function AuthPage() {
     setBusy(true);
     setMessage(null);
     try {
-      // Use Supabase's native OAuth flow
+      console.log("Starting Google OAuth flow...");
+      // Redirect directly to dashboard after OAuth completes
+      // This bypasses the route guard since we're already handling the session check
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
       if (error) {
+        console.error("OAuth error:", error);
         setMessage(error.message ?? "Google sign-in failed");
         setBusy(false);
         return;
       }
-      // signInWithOAuth redirects to Google; session will be detected by onAuthStateChange
+      console.log("Redirecting to Google...");
     } catch (err) {
+      console.error("Sign-in error:", err);
       setMessage(err instanceof Error ? err.message : "Google sign-in failed");
       setBusy(false);
     }
