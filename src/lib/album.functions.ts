@@ -263,13 +263,43 @@ export const getAlbumCheckoutStatus = createServerFn({ method: "POST" })
  * one guest's purchase.
  */
 export const getAlbumDownloads = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; sessionId: string }) =>
-    z.object({ token: tokenSchema, sessionId: sessionSchema }).parse(d),
+  .inputValidator((d: { token: string; sessionId: string; environment: StripeEnv }) =>
+    z
+      .object({ token: tokenSchema, sessionId: sessionSchema, environment: envSchema })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const db = await admin();
     const event = await resolveAlbum(db, data.token);
-    const order = await findAlbumOrder(db, event.id, data.sessionId);
+    let order = await findAlbumOrder(db, event.id, data.sessionId);
+
+    // Downloads can be the first page a guest lands on (refresh, slow
+    // webhook delivery, or Stripe returning here directly). Don't trust only
+    // our own "paid" flag — ask Stripe itself before saying we can't find
+    // the payment, the same server-side check the /status page performs.
+    if (order && order.status !== "paid") {
+      try {
+        const stripe = createStripeClient(data.environment);
+        const session = await stripe.checkout.sessions.retrieve(data.sessionId);
+        if (session.payment_status !== "unpaid") {
+          await db
+            .from("orders")
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string" ? session.payment_intent : null,
+            })
+            .eq("id", order.id)
+            .in("status", ["pending", "expired"]);
+          const { sendOrderReceipt } = await import("./receipt.server");
+          await sendOrderReceipt(db, order.id, data.environment);
+          order = { ...order, status: "paid" };
+        }
+      } catch (err) {
+        console.error("[getAlbumDownloads] Stripe settle check failed:", err);
+      }
+    }
 
     if (!order || order.status !== "paid") {
       return { eventName: event.name, photos: [] };

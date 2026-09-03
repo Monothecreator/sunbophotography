@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getAlbumDownloads } from "@/lib/album.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 const searchSchema = z.object({ session_id: z.string().optional() });
 
@@ -36,7 +37,10 @@ function AlbumDownloads() {
     queryKey: ["album-downloads", token, sessionId],
     enabled: !!sessionId,
     retry: false,
-    queryFn: () => fetchDownloads({ data: { token, sessionId: sessionId! } }),
+    queryFn: () =>
+      fetchDownloads({
+        data: { token, sessionId: sessionId!, environment: getStripeEnvironment() },
+      }),
   });
 
   return (
