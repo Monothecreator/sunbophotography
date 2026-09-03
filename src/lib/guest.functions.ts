@@ -378,12 +378,22 @@ export const getGuestDownloads = createServerFn({ method: "POST" })
 
     const items = await Promise.all(
       (photos ?? []).map(async (p) => {
-        const { data: signed } = await db.storage
-          .from("originals")
+        const { data: signed, error } = await db.storage
+          .from("photos")
           .createSignedUrl(p.file_path, 60 * 5, { download: p.filename ?? true });
+        if (error || !signed?.signedUrl) {
+          console.error(`[getGuestDownloads] failed to sign ${p.file_path}:`, error);
+        }
         return { id: p.id, filename: p.filename ?? "photo.jpg", url: signed?.signedUrl ?? "" };
       }),
     );
 
-    return { personName: person.name, eventName: event.name, photos: items };
+    // Drop photos we couldn't sign a URL for — an empty href on a download
+    // link makes the browser save the current page's HTML instead of the
+    // photo, which is worse than just omitting the broken entry.
+    return {
+      personName: person.name,
+      eventName: event.name,
+      photos: items.filter((item) => item.url !== ""),
+    };
   });

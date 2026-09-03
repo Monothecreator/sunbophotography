@@ -131,7 +131,7 @@ function Dashboard() {
 
     if (photos && photos.length > 0) {
       await supabase.storage.from("previews").remove(photos.map((p) => p.preview_path));
-      await supabase.storage.from("originals").remove(photos.map((p) => p.file_path));
+      await supabase.storage.from("photos").remove(photos.map((p) => p.file_path));
     }
     await supabase.from("photos").delete().eq("event_id", eventId);
     await supabase.from("people").delete().eq("event_id", eventId);

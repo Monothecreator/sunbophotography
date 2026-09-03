@@ -85,7 +85,7 @@ function EventWorkspace() {
       const file = files[i]!;
       const base = `${user.user.id}/${eventId}/${crypto.randomUUID()}`;
       const preview = await makeWatermarkedPreview(file, profile?.business_name ?? "");
-      await supabase.storage.from("originals").upload(`${base}-full`, file, {
+      await supabase.storage.from("photos").upload(`${base}-full`, file, {
         contentType: file.type,
       });
       await supabase.storage.from("previews").upload(`${base}-preview.jpg`, preview, {
@@ -146,7 +146,7 @@ function EventWorkspace() {
     if (!window.confirm("Delete this photo permanently?")) return;
     await supabase.from("photos").delete().eq("id", photo.id);
     await supabase.storage.from("previews").remove([photo.preview_path]);
-    await supabase.storage.from("originals").remove([photo.file_path]);
+    await supabase.storage.from("photos").remove([photo.file_path]);
     await qc.invalidateQueries({ queryKey: ["event", eventId] });
   }
 
