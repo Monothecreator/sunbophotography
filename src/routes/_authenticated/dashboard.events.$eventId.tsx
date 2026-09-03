@@ -81,16 +81,29 @@ function EventWorkspace() {
       .maybeSingle();
 
     setUploading({ done: 0, total: files.length });
+    const failures: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i]!;
       const base = `${user.user.id}/${eventId}/${crypto.randomUUID()}`;
       const preview = await makeWatermarkedPreview(file, profile?.business_name ?? "");
-      await supabase.storage.from("photos").upload(`${base}-full`, file, {
-        contentType: file.type,
-      });
-      await supabase.storage.from("previews").upload(`${base}-preview.jpg`, preview, {
-        contentType: "image/jpeg",
-      });
+
+      const { error: fullError } = await supabase.storage
+        .from("photos")
+        .upload(`${base}-full`, file, { contentType: file.type });
+      const { error: previewError } = await supabase.storage
+        .from("previews")
+        .upload(`${base}-preview.jpg`, preview, { contentType: "image/jpeg" });
+
+      // A photo row must never be created unless both files actually landed
+      // in storage — otherwise guests see a photo that can never be signed
+      // or downloaded, with no visible error anywhere.
+      if (fullError || previewError) {
+        console.error("Upload failed for", file.name, fullError, previewError);
+        failures.push(file.name);
+        setUploading({ done: i + 1, total: files.length });
+        continue;
+      }
+
       await supabase.from("photos").insert({
         event_id: eventId,
         file_path: `${base}-full`,
@@ -100,6 +113,11 @@ function EventWorkspace() {
       setUploading({ done: i + 1, total: files.length });
     }
     setUploading(null);
+    if (failures.length > 0) {
+      window.alert(
+        `${failures.length} file(s) failed to upload and were skipped:\n${failures.join("\n")}`,
+      );
+    }
     await qc.invalidateQueries({ queryKey: ["event", eventId] });
   }
 
