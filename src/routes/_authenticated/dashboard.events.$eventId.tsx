@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
@@ -30,6 +30,7 @@ type PreviewPhoto = {
 
 function EventWorkspace() {
   const { eventId } = Route.useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [personName, setPersonName] = useState("");
@@ -166,6 +167,41 @@ function EventWorkspace() {
     await qc.invalidateQueries({ queryKey: ["event", eventId] });
   }
 
+  async function deleteEvent() {
+    if (!data?.event) return;
+    const hasOrders = (data.orders ?? []).length > 0;
+    const confirmMessage = hasOrders
+      ? `Delete ${data.event.name}? This event has paid orders. Deleting it will permanently remove the album, all photos, and buyer access. Are you sure?`
+      : `Delete ${data.event.name}? All its photos, guests and gallery links will stop working.`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    const { data: photos } = await supabase
+      .from("photos")
+      .select("preview_path, file_path")
+      .eq("event_id", eventId);
+
+    if (photos && photos.length > 0) {
+      const previewPaths = photos.map((p) => p.preview_path).filter(Boolean);
+      const filePaths = photos.map((p) => p.file_path).filter(Boolean);
+      if (previewPaths.length > 0) {
+        await supabase.storage.from("previews").remove(previewPaths);
+      }
+      if (filePaths.length > 0) {
+        await supabase.storage.from("photos").remove(filePaths);
+      }
+    }
+    await supabase.from("photos").delete().eq("event_id", eventId);
+    await supabase.from("people").delete().eq("event_id", eventId);
+    const { error } = await supabase.from("events").delete().eq("id", eventId);
+    if (error) {
+      window.alert(`Could not delete ${data.event.name}: ${error.message}`);
+    } else {
+      await qc.invalidateQueries({ queryKey: ["dashboard"] });
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }
+
 
 
   const people = data?.people ?? [];
@@ -263,6 +299,12 @@ function EventWorkspace() {
                     className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     Rename
+                  </button>
+                  <button
+                    onClick={deleteEvent}
+                    className="rounded-md border border-border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                  >
+                    Delete event
                   </button>
                 </div>
               )}

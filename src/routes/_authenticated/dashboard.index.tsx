@@ -111,18 +111,11 @@ function Dashboard() {
   }
 
   async function deleteEvent(eventId: string, eventName: string, hasOrders: boolean) {
-    if (hasOrders) {
-      window.alert(
-        `${eventName} has paid orders, so it can't be deleted — buyers would lose their downloads.`,
-      );
-      return;
-    }
-    if (
-      !window.confirm(
-        `Delete ${eventName}? All its photos, guests and gallery links will stop working.`,
-      )
-    )
-      return;
+    const confirmMessage = hasOrders
+      ? `Delete ${eventName}? This event has paid orders. Deleting it will permanently remove the album, all photos, and buyer access. Are you sure?`
+      : `Delete ${eventName}? All its photos, guests and gallery links will stop working.`;
+
+    if (!window.confirm(confirmMessage)) return;
 
     const { data: photos } = await supabase
       .from("photos")
@@ -130,8 +123,14 @@ function Dashboard() {
       .eq("event_id", eventId);
 
     if (photos && photos.length > 0) {
-      await supabase.storage.from("previews").remove(photos.map((p) => p.preview_path));
-      await supabase.storage.from("photos").remove(photos.map((p) => p.file_path));
+      const previewPaths = photos.map((p) => p.preview_path).filter(Boolean);
+      const filePaths = photos.map((p) => p.file_path).filter(Boolean);
+      if (previewPaths.length > 0) {
+        await supabase.storage.from("previews").remove(previewPaths);
+      }
+      if (filePaths.length > 0) {
+        await supabase.storage.from("photos").remove(filePaths);
+      }
     }
     await supabase.from("photos").delete().eq("event_id", eventId);
     await supabase.from("people").delete().eq("event_id", eventId);
