@@ -1,13 +1,13 @@
 /**
  * Browser-side preview generation, run in the photographer's uploader before
- * anything leaves the machine. The watermarked, downscaled JPEG is the ONLY
+ * anything leaves the machine. The watermarked, downscaled WebP is the ONLY
  * derivative a guest can ever be served; the original is uploaded to a private
  * bucket and never signed until a paid order covers that photo id.
  */
 export async function makeWatermarkedPreview(
   file: File,
   businessName: string,
-  maxEdge = 1400,
+  maxEdge = 1000,
 ): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
@@ -57,8 +57,8 @@ export async function makeWatermarkedPreview(
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Preview generation failed"))),
-      "image/jpeg",
-      0.72,
+      "image/webp",
+      0.70,
     ),
   );
 }

@@ -72,14 +72,12 @@ export const getGuestGallery = createServerFn({ method: "POST" })
 
     const paid = await paidPhotoIds(db, person.id);
 
-    const items = await Promise.all(
-      (photos ?? []).map(async (p) => {
-        const { data: signed } = await db.storage
-          .from("previews")
-          .createSignedUrl(p.preview_path, 60 * 60);
-        return { id: p.id, previewUrl: signed?.signedUrl ?? "", paid: paid.has(p.id) };
-      }),
-    );
+    const items = (photos ?? []).map((p) => {
+      const { data: publicUrl } = db.storage
+        .from("previews")
+        .getPublicUrl(p.preview_path);
+      return { id: p.id, previewUrl: publicUrl?.publicUrl ?? "", paid: paid.has(p.id) };
+    });
 
     await db.from("gallery_views").insert({ person_id: person.id, event_id: event.id });
 

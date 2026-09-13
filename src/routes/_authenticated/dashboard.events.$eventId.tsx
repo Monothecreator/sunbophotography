@@ -52,20 +52,18 @@ function EventWorkspace() {
           supabase.from("photos").select("*").eq("event_id", eventId).order("created_at"),
           supabase.from("orders").select("*").eq("event_id", eventId).eq("status", "paid"),
         ]);
-      const withUrls: PreviewPhoto[] = await Promise.all(
-        (photos ?? []).map(async (p) => {
-          const { data: signed } = await supabase.storage
-            .from("previews")
-            .createSignedUrl(p.preview_path, 3600);
-          return {
-            id: p.id,
-            preview_path: p.preview_path,
-            file_path: p.file_path,
-            assigned_person_id: p.assigned_person_id,
-            url: signed?.signedUrl ?? "",
-          };
-        }),
-      );
+      const withUrls: PreviewPhoto[] = (photos ?? []).map((p) => {
+        const { data: publicUrl } = supabase.storage
+          .from("previews")
+          .getPublicUrl(p.preview_path);
+        return {
+          id: p.id,
+          preview_path: p.preview_path,
+          file_path: p.file_path,
+          assigned_person_id: p.assigned_person_id,
+          url: publicUrl?.publicUrl ?? "",
+        };
+      });
       return { event, people: people ?? [], photos: withUrls, orders: orders ?? [] };
     },
   });

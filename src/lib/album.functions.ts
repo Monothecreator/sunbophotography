@@ -57,14 +57,12 @@ export const getSharedAlbum = createServerFn({ method: "POST" })
       .eq("event_id", event.id)
       .order("created_at", { ascending: true });
 
-    const items = await Promise.all(
-      (photos ?? []).map(async (p) => {
-        const { data: signed } = await db.storage
-          .from("previews")
-          .createSignedUrl(p.preview_path, 60 * 60);
-        return { id: p.id, previewUrl: signed?.signedUrl ?? "" };
-      }),
-    );
+    const items = (photos ?? []).map((p) => {
+      const { data: publicUrl } = db.storage
+        .from("previews")
+        .getPublicUrl(p.preview_path);
+      return { id: p.id, previewUrl: publicUrl?.publicUrl ?? "" };
+    });
 
     return {
       eventName: event.name,
