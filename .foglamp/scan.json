@@ -1,0 +1,405 @@
+{
+  "version": 1,
+  "project": {
+    "name": "SunboMedia",
+    "slug": "sunbomedia",
+    "tagline": "Private QR galleries and paid event photo delivery for photographers",
+    "iconDomain": "sunbomedia.dev",
+    "date": "2026-09-24"
+  },
+  "stats": {
+    "agents": 0,
+    "models": 0,
+    "tools": 0,
+    "integrations": 4
+  },
+  "topModels": [],
+  "topTools": [],
+  "topIntegrations": [
+    {
+      "id": "supabase",
+      "label": "Supabase",
+      "domain": "supabase.com"
+    },
+    {
+      "id": "stripe",
+      "label": "Stripe",
+      "domain": "stripe.com"
+    },
+    {
+      "id": "resend",
+      "label": "Resend",
+      "domain": "resend.com"
+    },
+    {
+      "id": "lovable",
+      "label": "Lovable",
+      "domain": "lovable.dev"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "home",
+        "label": "Landing page",
+        "kind": "entry",
+        "sub": "/",
+        "sourceRef": "src/routes/index.tsx"
+      },
+      {
+        "id": "auth",
+        "label": "Photographer auth",
+        "kind": "entry",
+        "sub": "/auth",
+        "sourceRef": "src/routes/auth.tsx"
+      },
+      {
+        "id": "dashboard",
+        "label": "Photographer dashboard",
+        "kind": "entry",
+        "sub": "/dashboard",
+        "sourceRef": "src/routes/_authenticated/dashboard.tsx"
+      },
+      {
+        "id": "event",
+        "label": "Event workspace",
+        "kind": "entry",
+        "sub": "/dashboard/events/:id",
+        "sourceRef": "src/routes/_authenticated/dashboard.events.$eventId.tsx"
+      },
+      {
+        "id": "gallery",
+        "label": "Guest gallery",
+        "kind": "entry",
+        "sub": "/gallery/:qr_token"
+      },
+      {
+        "id": "album",
+        "label": "Shared album",
+        "kind": "entry",
+        "sub": "/album/:public_token"
+      },
+      {
+        "id": "checkout",
+        "label": "Guest checkout",
+        "kind": "entry",
+        "sub": "/gallery/:qr_token/checkout"
+      },
+      {
+        "id": "webhook",
+        "label": "Stripe webhook",
+        "kind": "entry",
+        "sub": "POST /api/public/payments/webhook",
+        "sourceRef": "src/routes/api/public/payments/webhook.ts"
+      },
+      {
+        "id": "guestsvc",
+        "label": "Guest access service",
+        "kind": "service",
+        "sourceRef": "src/lib/guest.functions.ts",
+        "detail": "Resolves private QR tokens, serves previews, creates orders and gates downloads."
+      },
+      {
+        "id": "albumsvc",
+        "label": "Shared album service",
+        "kind": "service",
+        "sourceRef": "src/lib/album.functions.ts",
+        "detail": "Serves event previews and ties shared-album purchases to checkout sessions."
+      },
+      {
+        "id": "photosvc",
+        "label": "Photo ingestion",
+        "kind": "service",
+        "sourceRef": "src/routes/_authenticated/dashboard.events.$eventId.tsx",
+        "detail": "Uploads originals and watermarked previews, then records photo metadata."
+      },
+      {
+        "id": "prices",
+        "label": "Pricing service",
+        "kind": "service",
+        "sourceRef": "src/lib/pricing.ts",
+        "detail": "Calculates photo, bundle and gallery prices from event pricing tiers."
+      },
+      {
+        "id": "receipt",
+        "label": "Receipt service",
+        "kind": "service",
+        "sourceRef": "src/lib/receipt.server.ts",
+        "detail": "Sends paid-order receipts and private download links exactly once."
+      },
+      {
+        "id": "stripeSvc",
+        "label": "Stripe payment service",
+        "kind": "service",
+        "sourceRef": "src/lib/stripe.server.ts",
+        "detail": "Creates Stripe clients and verifies signed payment webhooks."
+      },
+      {
+        "id": "team",
+        "label": "Studio team service",
+        "kind": "service",
+        "sourceRef": "src/lib/studio.functions.ts",
+        "detail": "Manages studio members, invitations and owner-controlled studio settings."
+      },
+      {
+        "id": "supabaseAuth",
+        "label": "Supabase Auth",
+        "kind": "external",
+        "domain": "supabase.com"
+      },
+      {
+        "id": "pg",
+        "label": "Postgres",
+        "kind": "store",
+        "domain": "postgresql.org"
+      },
+      {
+        "id": "photos",
+        "label": "Original photo storage",
+        "kind": "store",
+        "domain": "supabase.com"
+      },
+      {
+        "id": "previews",
+        "label": "Preview storage",
+        "kind": "store",
+        "domain": "supabase.com"
+      },
+      {
+        "id": "stripe",
+        "label": "Stripe Checkout",
+        "kind": "external",
+        "domain": "stripe.com"
+      },
+      {
+        "id": "resend",
+        "label": "Resend email",
+        "kind": "external",
+        "domain": "resend.com"
+      },
+      {
+        "id": "qr",
+        "label": "QR code generator",
+        "kind": "service",
+        "sourceRef": "src/routes/_authenticated/dashboard.events.$eventId.tsx",
+        "detail": "Generates guest and event QR codes from unguessable gallery tokens."
+      },
+      {
+        "id": "watermark",
+        "label": "Watermark pipeline",
+        "kind": "service",
+        "sourceRef": "src/lib/watermark.ts",
+        "detail": "Creates lower-resolution watermarked previews before guest delivery."
+      },
+      {
+        "id": "lovable",
+        "label": "Lovable cloud tooling",
+        "kind": "external",
+        "domain": "lovable.dev"
+      },
+      {
+        "id": "loginflow",
+        "label": "Auth middleware",
+        "kind": "service",
+        "sourceRef": "src/integrations/supabase/auth-middleware.ts",
+        "detail": "Attaches Supabase sessions and user identity to authenticated server functions."
+      }
+    ],
+    "edges": [
+      {
+        "from": "home",
+        "to": "auth",
+        "kind": "triggers"
+      },
+      {
+        "from": "auth",
+        "to": "loginflow",
+        "kind": "triggers"
+      },
+      {
+        "from": "loginflow",
+        "to": "supabaseAuth",
+        "kind": "calls"
+      },
+      {
+        "from": "dashboard",
+        "to": "event",
+        "kind": "triggers"
+      },
+      {
+        "from": "event",
+        "to": "photosvc",
+        "kind": "triggers"
+      },
+      {
+        "from": "photosvc",
+        "to": "photos",
+        "kind": "writes"
+      },
+      {
+        "from": "photosvc",
+        "to": "watermark",
+        "kind": "calls"
+      },
+      {
+        "from": "watermark",
+        "to": "previews",
+        "kind": "writes",
+        "label": "stores watermarked previews"
+      },
+      {
+        "from": "photosvc",
+        "to": "pg",
+        "kind": "writes",
+        "label": "records photo metadata"
+      },
+      {
+        "from": "event",
+        "to": "qr",
+        "kind": "calls"
+      },
+      {
+        "from": "qr",
+        "to": "pg",
+        "kind": "reads",
+        "label": "reads gallery tokens"
+      },
+      {
+        "from": "gallery",
+        "to": "guestsvc",
+        "kind": "triggers"
+      },
+      {
+        "from": "guestsvc",
+        "to": "pg",
+        "kind": "reads",
+        "label": "resolves QR token"
+      },
+      {
+        "from": "guestsvc",
+        "to": "previews",
+        "kind": "reads"
+      },
+      {
+        "from": "guestsvc",
+        "to": "checkout",
+        "kind": "triggers"
+      },
+      {
+        "from": "checkout",
+        "to": "guestsvc",
+        "kind": "calls"
+      },
+      {
+        "from": "guestsvc",
+        "to": "prices",
+        "kind": "calls"
+      },
+      {
+        "from": "guestsvc",
+        "to": "stripeSvc",
+        "kind": "calls"
+      },
+      {
+        "from": "stripeSvc",
+        "to": "stripe",
+        "kind": "calls"
+      },
+      {
+        "from": "album",
+        "to": "albumsvc",
+        "kind": "triggers"
+      },
+      {
+        "from": "albumsvc",
+        "to": "pg",
+        "kind": "reads"
+      },
+      {
+        "from": "albumsvc",
+        "to": "previews",
+        "kind": "reads"
+      },
+      {
+        "from": "albumsvc",
+        "to": "prices",
+        "kind": "calls"
+      },
+      {
+        "from": "albumsvc",
+        "to": "stripeSvc",
+        "kind": "calls"
+      },
+      {
+        "from": "webhook",
+        "to": "stripeSvc",
+        "kind": "calls"
+      },
+      {
+        "from": "stripeSvc",
+        "to": "pg",
+        "kind": "writes",
+        "label": "settles payment status"
+      },
+      {
+        "from": "webhook",
+        "to": "receipt",
+        "kind": "triggers"
+      },
+      {
+        "from": "receipt",
+        "to": "stripe",
+        "kind": "reads",
+        "label": "reads buyer email"
+      },
+      {
+        "from": "receipt",
+        "to": "resend",
+        "kind": "calls"
+      },
+      {
+        "from": "receipt",
+        "to": "pg",
+        "kind": "writes",
+        "label": "claims receipt once"
+      },
+      {
+        "from": "guestsvc",
+        "to": "photos",
+        "kind": "reads",
+        "label": "signs paid originals"
+      },
+      {
+        "from": "team",
+        "to": "pg",
+        "kind": "reads"
+      },
+      {
+        "from": "team",
+        "to": "pg",
+        "kind": "writes"
+      },
+      {
+        "from": "team",
+        "to": "supabaseAuth",
+        "kind": "reads"
+      },
+      {
+        "from": "dashboard",
+        "to": "team",
+        "kind": "triggers"
+      },
+      {
+        "from": "loginflow",
+        "to": "dashboard",
+        "kind": "triggers"
+      },
+      {
+        "from": "lovable",
+        "to": "supabaseAuth",
+        "kind": "calls",
+        "label": "cloud auth integration"
+      }
+    ]
+  }
+}
